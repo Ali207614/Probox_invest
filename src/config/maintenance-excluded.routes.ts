@@ -6,5 +6,4 @@ export const MaintenanceExcludedRoutes = [
   { path: 'features', method: RequestMethod.GET },
   { path: 'auth/login', method: RequestMethod.POST },
   { path: 'auth/register', method: RequestMethod.POST },
-  { path: 'booking/date/:date', method: RequestMethod.GET },
 ];
