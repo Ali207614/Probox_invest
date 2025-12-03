@@ -16,8 +16,8 @@ export class JwtMiddleware implements NestMiddleware {
       return next();
     }
 
-    const token = authHeader.split(' ')[1];
-    const secret = this.configService.get<string>('JWT_SECRET');
+    const token: string = authHeader.split(' ')[1];
+    const secret: string | undefined = this.configService.get<string>('JWT_SECRET');
     if (!secret) {
       throw new Error('JWT_SECRET is not defined');
     }
@@ -32,14 +32,14 @@ export class JwtMiddleware implements NestMiddleware {
       }
       req.user = {
         id: decoded.id,
-        phone_number: decoded.phone_number,
+        phone_main: decoded.phone_main,
         roles: decoded.roles ?? [],
       };
       return next();
     } catch (error) {
       throw new UnauthorizedException({
-        message: 'Invalid or expired token',
-        location: 'invalid_token',
+        message: `Invalid token: ${error}`,
+        location: 'invalid_token ',
       });
     }
   }

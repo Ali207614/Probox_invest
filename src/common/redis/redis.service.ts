@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import * as lz4 from 'lz4';
+import * as lz4 from 'lz4js';
 import { LoggerService } from 'src/common/logger/logger.service';
 import type { Redis as IORedisClient } from 'ioredis';
 
@@ -59,6 +59,7 @@ export class RedisService {
       let payload: string;
       if (json.length < this.rawThreshold) {
         payload = StoredFormat.RAW + json;
+
         this.logger.log(
           `[Redis SET] key=${key} | RAW | size=${originalSize}B (~${(originalSize / 1024).toFixed(
             2,
@@ -66,10 +67,12 @@ export class RedisService {
         );
       } else {
         const jsonBuf = Buffer.from(json, 'utf8');
-        const compressed = lz4.encode(jsonBuf); // <-- Buffer kiritildi
+
+        const compressed = lz4.encode(jsonBuf);
         const compressedSize = compressed.length;
 
-        payload = StoredFormat.LZ4 + compressed.toString('base64');
+        payload = StoredFormat.LZ4 + Buffer.from(compressed).toString('base64');
+
         this.logger.log(
           `[Redis SET] key=${key} | LZ4 | original=${originalSize}B (~${(
             originalSize / 1024
@@ -100,8 +103,11 @@ export class RedisService {
       if (data.startsWith(StoredFormat.LZ4)) {
         const b64 = data.slice(StoredFormat.LZ4.length);
         const buf = Buffer.from(b64, 'base64');
-        const decodedBuf = lz4.decode(buf);
-        const json = decodedBuf.toString('utf8');
+
+        // ⚡ LZ4JS — full JS decompress
+        const decoded = lz4.decode(buf);
+        const json = Buffer.from(decoded).toString('utf8');
+
         return JSON.parse(json) as T;
       }
 
@@ -114,6 +120,7 @@ export class RedisService {
 
   async del(key: string): Promise<void> {
     if (!(await this.ensureConnected())) return;
+
     try {
       await this.client!.del(this.buildKey(key));
     } catch (err) {
@@ -127,6 +134,7 @@ export class RedisService {
     try {
       const fullPattern = this.buildKey(`${pattern}*`);
       let cursor = '0';
+
       do {
         const [nextCursor, keys] = await this.client!.scan(
           cursor,
@@ -136,6 +144,7 @@ export class RedisService {
           scanCount,
         );
         cursor = nextCursor;
+
         if (keys.length > 0) {
           await this.client!.del(...keys);
         }

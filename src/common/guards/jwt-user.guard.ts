@@ -14,7 +14,7 @@ export class JwtUserAuthGuard extends AuthGuard('jwt-user') {
     const can = (await super.canActivate(context)) as boolean;
     if (!can) return false;
 
-    const request = context.switchToHttp().getRequest<UserRequest>();
+    const request: UserRequest = context.switchToHttp().getRequest<UserRequest>();
     const user: UserPayload | undefined = request.user;
 
     if (!user || !user.id) {
@@ -24,7 +24,7 @@ export class JwtUserAuthGuard extends AuthGuard('jwt-user') {
       });
     }
 
-    const authHeader = request.headers.authorization;
+    const authHeader: string | undefined = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException({
@@ -33,15 +33,25 @@ export class JwtUserAuthGuard extends AuthGuard('jwt-user') {
       });
     }
 
-    const token = authHeader.substring(7);
+    const token: string = authHeader.substring(7);
 
     const sessionKey = `session:user:${user.id}`;
-    const storedToken = await this.redisService.get<string | null>(sessionKey);
+    const storedToken: string | null = await this.redisService.get<string | null>(sessionKey);
 
     if (!storedToken || storedToken !== token) {
       throw new UnauthorizedException({
         message: 'Session invalid or expired',
         location: 'invalid_session',
+      });
+    }
+
+    const blacklistKey = `blacklist:token:${token}`;
+    const isBlacklisted: string | null = await this.redisService.get<string | null>(blacklistKey);
+
+    if (isBlacklisted) {
+      throw new UnauthorizedException({
+        message: 'Token has been blacklisted',
+        location: 'blacklisted_token',
       });
     }
 

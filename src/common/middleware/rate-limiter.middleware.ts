@@ -5,7 +5,7 @@ import RedisStore, { type RedisReply } from 'rate-limit-redis';
 import Redis from 'ioredis';
 import { LoggerService } from '../logger/logger.service';
 import { HttpStatus } from '@nestjs/common';
-import { AdminRequest } from '../types/request-with-admin.type';
+import { UserRequest } from '../types/request-user.type';
 type ExpressMiddleware = (req: Request, res: Response, next: NextFunction) => void;
 
 @Injectable()
@@ -21,7 +21,7 @@ export class RateLimiterMiddleware implements NestMiddleware {
     this.limiter = rateLimit({
       windowMs: 60 * 1000,
       max: 30,
-      keyGenerator: (req: AdminRequest): string => req?.admin?.id ?? req.ip ?? 'unknown',
+      keyGenerator: (req: UserRequest): string => req?.user?.id ?? req.ip ?? 'unknown',
 
       handler: (req: Request, res: Response) => {
         const statusCode = 429;

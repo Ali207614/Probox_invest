@@ -18,11 +18,6 @@ import type { Application as ExpressApp, RequestHandler } from 'express';
 import { getQueueToken as getBullToken } from '@nestjs/bull';
 import { Queue as BullQueue } from 'bull';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
-
-// BullMQ
-import { Queue as BullMQQueue } from 'bullmq';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-
 // Bull Board UI
 import { createBullBoard } from '@bull-board/api';
 import { ExpressAdapter } from '@bull-board/express';
@@ -119,26 +114,10 @@ async function bootstrap(): Promise<void> {
     logger.warn('[BullBoard] sap Bull queue DI orqali topilmadi (optional).');
   }
 
-  let campaignsQueue: BullMQQueue;
-  try {
-    campaignsQueue = app.get<BullMQQueue>('CAMPAIGNS_QUEUE');
-  } catch {
-    logger.warn('[BullBoard] CAMPAIGNS_QUEUE provider topilmadi. UI-only instansiya yaratamiz.');
-    campaignsQueue = new BullMQQueue('campaigns', {
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number(process.env.REDIS_PORT) || 6379,
-      },
-    });
-  }
-
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
-  const queuesAdapters = [
-    ...(sapQueue ? [new BullAdapter(sapQueue)] : []),
-    new BullMQAdapter(campaignsQueue),
-  ];
+  const queuesAdapters = sapQueue ? [new BullAdapter(sapQueue)] : [];
 
   createBullBoard({
     queues: queuesAdapters,
@@ -151,9 +130,9 @@ async function bootstrap(): Promise<void> {
   const expressApp = app.getHttpAdapter().getInstance() as ExpressApp;
   expressApp.set('trust proxy', 1);
 
-  logger.log(`https://${HOST}:${PORT}/${GLOBAL_PREFIX}`);
-  logger.log(`Swagger: https://${HOST}:${PORT}/${GLOBAL_PREFIX}/docs`);
-  logger.log(`Queues: https://${HOST}:${PORT}/admin/queues`);
+  logger.log(`http://${HOST}:${PORT}/${GLOBAL_PREFIX}`);
+  logger.log(`Swagger: http://${HOST}:${PORT}/${GLOBAL_PREFIX}/docs`);
+  logger.log(`Queues: http://${HOST}:${PORT}/admin/queues`);
 }
 
 bootstrap().catch((err) => {

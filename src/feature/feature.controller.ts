@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Patch, Body, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAdminAuthGuard } from 'src/common/guards/jwt-admin.guard';
 import { FeatureService } from './feature.service';
+import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 
 interface FeaturesMap {
   [key: string]: boolean;
@@ -26,7 +26,7 @@ export class FeatureController {
   }
 
   @Patch(':key')
-  @UseGuards(JwtAdminAuthGuard)
+  @UseGuards(JwtUserAuthGuard)
   @ApiOperation({ summary: 'Update features' })
   async update(
     @Param('key') key: string,
