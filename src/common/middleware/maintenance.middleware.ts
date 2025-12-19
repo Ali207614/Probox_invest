@@ -9,21 +9,22 @@ export class MaintenanceMiddleware implements NestMiddleware {
 
   async use(req: Request, res: Response, next: NextFunction) {
     try {
-      const start = Date.now();
-      const isOperational = await this.featureService.isFeatureActive('system.operational');
-      const duration = Date.now() - start;
+      const start: number = Date.now();
+      const isOperational: boolean =
+        await this.featureService.isFeatureActive('system.operational');
+      const duration: number = Date.now() - start;
       console.log(`🛠 isMaintenance: ${isOperational} (${duration}ms)`);
 
       if (isOperational) return next();
 
-      const rawPath = req.originalUrl || req.url || req.path;
-      const reqPath = rawPath.split('?')[0].replace(/\/+$/, '');
-      const reqMethod = req.method.toUpperCase();
+      const rawPath: string = req.originalUrl || req.url || req.path;
+      const reqPath: string = rawPath.split('?')[0].replace(/\/+$/, '');
+      const reqMethod: string = req.method.toUpperCase();
 
-      const isExcluded = MaintenanceExcludedRoutes.some((route) => {
-        const routeBase = route.path.split('/:')[0]; // `/booking/date`
-        const methodMatches = reqMethod === RequestMethod[route.method];
-        const pathMatches = reqPath.startsWith(`/${routeBase}`);
+      const isExcluded: boolean = MaintenanceExcludedRoutes.some((route) => {
+        const routeBase: string = route.path.split('/:')[0]; // `/booking/date`
+        const methodMatches: boolean = reqMethod === RequestMethod[route.method];
+        const pathMatches: boolean = reqPath.startsWith(`/${routeBase}`);
         return methodMatches && pathMatches;
       });
 

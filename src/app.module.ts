@@ -2,8 +2,6 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { KnexModule } from 'nestjs-knex';
 import knexConfig from './config/knex.config';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
-import { RateLimitedAdminRoutes } from './config/admin-rate-limited.routes';
-import { RateLimitedUserRoutes } from './config/user-rate-limited.routes';
 import { PublicRoutes } from './config/public.routes';
 import { RateLimiterByIpMiddleware } from './common/middleware/rate-limiter-by-ip.middleware';
 import { MaintenanceMiddleware } from './common/middleware/maintenance.middleware';
@@ -21,7 +19,9 @@ import { UsersController } from './users/users.controller';
 import { UsersModule } from './users/users.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
-import { AuthService } from './auth/auth.service';
+import { RateLimitedUserRoutes } from './config/user-rate-limited.routes';
+import { SapModule } from './sap/sap.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -40,6 +40,7 @@ import { AuthService } from './auth/auth.service';
     }),
     KnexModule.forRoot({ config: knexConfig }),
     UsersModule,
+    SapModule,
   ],
   controllers: [FeatureController, UsersController, AuthController],
   providers: [FeatureService, LoggerService, UsersService],
@@ -51,8 +52,6 @@ export class AppModule implements NestModule {
     consumer.apply(RateLimiterByIpMiddleware).forRoutes(...PublicRoutes);
 
     consumer.apply(JwtMiddleware, RateLimiterMiddleware).forRoutes(...RateLimitedUserRoutes);
-
-    consumer.apply(JwtMiddleware, RateLimiterMiddleware).forRoutes(...RateLimitedAdminRoutes);
 
     consumer.apply(LoggingMiddleware).forRoutes('*');
   }

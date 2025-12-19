@@ -1,0 +1,1 @@
+SELECT T0."Debit", T0."Credit", T0."TransId", T0."Closed", T0."RefDate", T0."TransType" FROM JDT1 T0 WHERE T0."ShortName" ='INV001' and  T0."TransType" in (-2,24,30,46) ORDER BY T0."RefDate"  asc

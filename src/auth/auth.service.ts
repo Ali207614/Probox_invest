@@ -22,7 +22,8 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { UsersService } from '../users/users.service';
 import { IBusinessPartner } from '../common/interfaces/business-partner.interface';
 import { IUser } from '../common/interfaces/user.interface';
-import { ConfigService } from '@nestjs/config';
+import { SapService } from '../sap/hana/sap-hana.service';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -31,13 +32,13 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
-    private readonly configService: ConfigService,
+    private readonly sapService: SapService,
   ) {}
 
   private readonly RESET_PREFIX = 'reset-code:';
 
   async sendVerificationCode(dto: SmsDto): Promise<{ message: string; code: string }> {
-    const sapPartners: IBusinessPartner[] = await this.usersService.getBusinessPartnerByPhone(
+    const sapPartners: IBusinessPartner[] = await this.sapService.getBusinessPartnerByPhone(
       dto.phone_main,
     );
 
@@ -91,7 +92,6 @@ export class AuthService {
   }
 
   async completeRegistration(dto: RegisterDto): Promise<{ access_token: string }> {
-    console.log('📌 ConfigService JWT_SECRET:', this.configService.get('JWT_SECRET'));
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
     if (!user) {
@@ -162,7 +162,7 @@ export class AuthService {
     }
 
     const payload = { id: user.id, phone_main: user.phone_main };
-    const token = this.jwtService.sign(payload);
+    const token: string = this.jwtService.sign(payload);
 
     await this.setUserSession(user.id, token);
 

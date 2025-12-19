@@ -8,9 +8,11 @@ import { FeatureModule } from 'src/feature/feature.module';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { UsersModule } from '../users/users.module';
 import { JwtUserStrategy } from '../common/strategies/jwt-user.strategy';
+import { SapModule } from '../sap/sap.module';
 
 @Module({
   imports: [
+    SapModule,
     ConfigModule,
     RedisModule,
     FeatureModule,
