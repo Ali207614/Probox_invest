@@ -129,7 +129,7 @@ export class AuthService {
       status: 'Open',
     });
 
-    const payload = { id: user.id, phone_main: user.phone_main };
+    const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
     const token: string = this.jwtService.sign(payload);
 
     await this.setUserSession(user.id, token);
@@ -161,7 +161,7 @@ export class AuthService {
       });
     }
 
-    const payload = { id: user.id, phone_main: user.phone_main };
+    const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
     const token: string = this.jwtService.sign(payload);
 
     await this.setUserSession(user.id, token);
