@@ -19,3 +19,12 @@ export interface InvestorIncomeSummary {
   reinvest_fund: number;
   dividend_paid: number;
 }
+
+export interface InvestorTransaction {
+  ref_date: string;
+  trans_id: number;
+  trans_type: number;
+  description: string | null;
+  amount: number;
+  transaction_type: 'initial_capital' | 'additional_capital' | 'reinvest' | 'dividend' | 'other';
+}

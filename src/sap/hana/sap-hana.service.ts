@@ -5,6 +5,7 @@ import {
   IBpMonthlyIncomeSummary,
   IBusinessPartner,
   InvestorIncomeSummary,
+  InvestorTransaction,
 } from '../../common/interfaces/business-partner.interface';
 import { loadSQL } from '../../common/utils/sql-loader.util';
 
@@ -108,6 +109,51 @@ export class SapService {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error('❌ [SAP] getInvestorIncomeSummary failed', message);
       throw new ServiceUnavailableException('SAP query failed (getInvestorIncomeSummary)');
+    }
+  }
+
+  async getInvestorTransactions(
+    bpCode: string,
+    reinvestAccount: number,
+    limit: number,
+    offset: number,
+  ): Promise<{
+    rows: InvestorTransaction[];
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
+    const sql = loadSQL('sap/hana/queries/get-bp-investor-transactions.sql').replace(
+      /{{schema}}/g,
+      this.schema,
+    );
+
+    this.logger.log(`📦 [SAP] Investor transactions list: bp=${bpCode}`);
+
+    try {
+      const params = [reinvestAccount, bpCode, limit, offset];
+
+      const rows = await this.hana.executeOnce<InvestorTransaction & { total: number }>(
+        sql,
+        params,
+      );
+
+      const total = rows?.[0]?.total ?? 0;
+
+      const cleanedRows: InvestorTransaction[] = rows.map(
+        ({ total, ...transaction }) => transaction,
+      );
+
+      return {
+        rows: cleanedRows,
+        total,
+        limit,
+        offset,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error('❌ [SAP] getInvestorTransactions failed', message);
+      throw new ServiceUnavailableException('SAP query failed (getInvestorTransactions)');
     }
   }
 }
