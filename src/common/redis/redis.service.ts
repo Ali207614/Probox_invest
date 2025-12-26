@@ -1,14 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import * as lz4 from 'lz4js';
 import { LoggerService } from 'src/common/logger/logger.service';
 import type { Redis as IORedisClient } from 'ioredis';
-
-type JsonValue = unknown;
-
-enum StoredFormat {
-  RAW = 'RAW:',
-  LZ4 = 'LZ4:',
-}
 
 @Injectable()
 export class RedisService {
@@ -49,69 +41,22 @@ export class RedisService {
     }
   }
 
-  async set(key: string, value: JsonValue, ttlSeconds = 3600): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds = 3600): Promise<void> {
     if (!(await this.ensureConnected())) return;
 
     try {
-      const json = JSON.stringify(value);
-      const originalSize = Buffer.byteLength(json, 'utf8');
-
-      let payload: string;
-      if (json.length < this.rawThreshold) {
-        payload = StoredFormat.RAW + json;
-
-        this.logger.log(
-          `[Redis SET] key=${key} | RAW | size=${originalSize}B (~${(originalSize / 1024).toFixed(
-            2,
-          )} KB)`,
-        );
-      } else {
-        const jsonBuf = Buffer.from(json, 'utf8');
-
-        const compressed = lz4.encode(jsonBuf);
-        const compressedSize = compressed.length;
-
-        payload = StoredFormat.LZ4 + Buffer.from(compressed).toString('base64');
-
-        this.logger.log(
-          `[Redis SET] key=${key} | LZ4 | original=${originalSize}B (~${(
-            originalSize / 1024
-          ).toFixed(2)} KB) | compressed=${compressedSize}B (~${(compressedSize / 1024).toFixed(
-            2,
-          )} KB) | ratio=${((compressedSize / originalSize) * 100).toFixed(1)}%`,
-        );
-      }
-
-      await this.client!.set(this.buildKey(key), payload, 'EX', ttlSeconds);
+      await this.client!.set(this.buildKey(key), JSON.stringify(value), 'EX', ttlSeconds);
     } catch (err) {
       this.handleError(err, `Redis SET error for key=${key}`);
     }
   }
 
-  async get<T = JsonValue>(key: string): Promise<T | null> {
+  async get<T = unknown>(key: string): Promise<T | null> {
     if (!(await this.ensureConnected())) return null;
 
     try {
       const data = await this.client!.get(this.buildKey(key));
-      if (!data) return null;
-
-      if (data.startsWith(StoredFormat.RAW)) {
-        const json = data.slice(StoredFormat.RAW.length);
-        return JSON.parse(json) as T;
-      }
-
-      if (data.startsWith(StoredFormat.LZ4)) {
-        const b64 = data.slice(StoredFormat.LZ4.length);
-        const buf = Buffer.from(b64, 'base64');
-
-        // ⚡ LZ4JS — full JS decompress
-        const decoded = lz4.decode(buf);
-        const json = Buffer.from(decoded).toString('utf8');
-
-        return JSON.parse(json) as T;
-      }
-
-      throw new Error('Unknown data format prefix');
+      return data ? (JSON.parse(data) as T) : null;
     } catch (err) {
       this.handleError(err, `Redis GET error for key=${key}`);
       return null;

@@ -34,11 +34,15 @@ export class JwtUserAuthGuard extends AuthGuard('jwt-user') {
     }
 
     const token: string = authHeader.substring(7);
-
+    console.log(user)
     const sessionKey = `session:user:${user.id}`;
     const storedToken: string | null = await this.redisService.get<string | null>(sessionKey);
+    console.log(storedToken);
+    console.log(sessionKey);
+    console.log(token)
 
     if (!storedToken || storedToken !== token) {
+        console.log('bu joyg tushdi')
       throw new UnauthorizedException({
         message: 'Session invalid or expired',
         location: 'invalid_session',

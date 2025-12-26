@@ -18,8 +18,8 @@ GROUP BY H."RefDate", H."TransId"
     ),
     bounds AS (
 SELECT
-    ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE))                      AS "ThisMonthStart",
-    ADD_MONTHS(ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE)), -1)     AS "LastMonthStart"
+    ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE))                  AS "ThisMonthStart",
+    ADD_MONTHS(ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE)), -1) AS "LastMonthStart"
 FROM DUMMY
     ),
     income AS (
@@ -43,12 +43,12 @@ FROM per_trans p
     CROSS JOIN bounds b
     )
 SELECT
-    bb."Balance",
-    i."IncomeThisMonth",
-    i."IncomeLastMonth",
+    bb."Balance" AS "balance",
+    i."IncomeThisMonth" as "income_this_month",
+    i."IncomeLastMonth" as "income_last_month",
     CASE
         WHEN i."IncomeLastMonth" = 0 THEN NULL
         ELSE ROUND(((i."IncomeThisMonth" - i."IncomeLastMonth") / ABS(i."IncomeLastMonth")) * 100, 2)
-        END AS "IncomeGrowthPercent"
+        END AS "income_growth_percent"
 FROM bp_balance bb
          CROSS JOIN income i;

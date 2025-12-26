@@ -246,6 +246,7 @@ export class AuthService {
   }
 
   private async setUserSession(userId: string, token: string): Promise<void> {
-    await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24 * 7); // 7 days
+    console.log('set session session', userId);
+    await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24); // 1 days
   }
 }

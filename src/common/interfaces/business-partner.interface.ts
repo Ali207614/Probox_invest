@@ -12,3 +12,10 @@ export interface IBpMonthlyIncomeSummary {
   IncomeLastMonth: number | string;
   IncomeGrowthPercent: number | string | null;
 }
+
+export interface InvestorIncomeSummary {
+  initial_capital: number;
+  additional_capital: number;
+  reinvest_fund: number;
+  dividend_paid: number;
+}
