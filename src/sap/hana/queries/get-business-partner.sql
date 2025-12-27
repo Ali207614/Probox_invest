@@ -7,6 +7,13 @@ SELECT
 FROM {{schema}}."OCRD" T0
 WHERE T0."CardType" = 'C'
   AND (
-    T0."Phone1" = ?
-   OR T0."Phone2" = ?
+    RIGHT(
+    REPLACE_REGEXPR('[^0-9]' IN T0."Phone1" WITH ''),
+    9
+    ) = ?
+   OR
+    RIGHT(
+    REPLACE_REGEXPR('[^0-9]' IN T0."Phone2" WITH ''),
+    9
+    ) = ?
     );

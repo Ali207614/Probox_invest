@@ -8,6 +8,7 @@ import {
   InvestorTransaction,
 } from '../../common/interfaces/business-partner.interface';
 import { loadSQL } from '../../common/utils/sql-loader.util';
+import { normalizeUzPhone } from '../../common/utils/uz-phone.util';
 
 @Injectable()
 export class SapService {
@@ -25,15 +26,21 @@ export class SapService {
       this.schema,
     );
 
-    this.logger.log(`📦 [SAP] Fetching business partner by phone: ${phone}`);
+    const { last9 } = normalizeUzPhone(phone);
+
+    this.logger.log(`📦 [SAP] Fetching business partner by phone (last9=${last9})`);
 
     try {
-      const params = [phone, phone];
-      return await this.hana.executeOnce<IBusinessPartner>(sql, params);
+      return await this.hana.executeOnce<IBusinessPartner>(sql, [last9, last9]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+
       this.logger.error('❌ [SAP] getBusinessPartnerByPhone failed', message);
-      throw new ServiceUnavailableException('SAP query failed (getBusinessPartnerByPhone)');
+
+      throw new ServiceUnavailableException({
+        message: 'SAP query failed (getBusinessPartnerByPhone)',
+        location: 'sap.getBusinessPartnerByPhone',
+      });
     }
   }
 
