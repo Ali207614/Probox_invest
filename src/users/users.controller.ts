@@ -27,13 +27,6 @@ export class UsersController {
     return this.sapService.getInvestorIncomeSummary(cardCode, 8710);
   }
 
-  // async getMyInvestorTransactions(@Req() req: AuthenticatedRequest) {
-  //   const cardCode = req.user.sap_card_code;
-  //   const investorTransactions = await this.sapService.getInvestorTransactions(cardCode, 8710);
-  //   console.log(investorTransactions.reduce((a, b) => a + +b.amount, 0));
-  //   return investorTransactions;
-  // }
-
   @Get('me/investor-transactions')
   @UseInterceptors(PaginationInterceptor)
   async getMyInvestorTransactions(

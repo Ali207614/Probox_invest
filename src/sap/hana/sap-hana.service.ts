@@ -20,7 +20,7 @@ export class SapService {
   // Business Partner by phone
   // ------------------------------------------------------------------
   async getBusinessPartnerByPhone(phone: string): Promise<IBusinessPartner[]> {
-    const sql = loadSQL('users/queries/get-business-partner.sql').replace(
+    const sql = loadSQL('sap/hana/queries/get-business-partner.sql').replace(
       /{{schema}}/g,
       this.schema,
     );
