@@ -209,8 +209,10 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string; code: string }> {
-    const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
+  async forgotPassword(dto: ForgotPasswordDto): Promise<SendCodeResponse> {
+    const { raw: phone } = normalizeUzPhone(dto.phone_main);
+
+    const user = await this.usersService.findByPhoneNumber(phone);
 
     if (!user) {
       throw new NotFoundException({
@@ -228,14 +230,25 @@ export class AuthService {
 
     const code: string = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await this.redisService.set(`${this.RESET_PREFIX}${dto.phone_main}`, code, 300);
+    const EXPIRES_IN = 300;
+    const RETRY_AFTER = 60;
 
-    console.log(`Reset code for ${dto.phone_main}: ${code}`);
+    await this.redisService.set(`${this.RESET_PREFIX}${phone}`, code, EXPIRES_IN);
 
-    return {
+    const res: SendCodeResponse = {
       message: 'Reset code sent successfully',
-      code,
+      data: {
+        expires_in: EXPIRES_IN,
+        expires_at: new Date(Date.now() + EXPIRES_IN * 1000).toISOString(),
+        retry_after: RETRY_AFTER,
+      },
     };
+
+    if (process.env.NODE_ENV !== 'production') {
+      res.code = code;
+    }
+
+    return res;
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
