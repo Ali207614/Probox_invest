@@ -99,6 +99,38 @@ export class RedisService {
     }
   }
 
+  async incr(key: string): Promise<number> {
+    if (!(await this.ensureConnected())) return 0;
+
+    try {
+      return await this.client!.incr(this.buildKey(key));
+    } catch (err) {
+      this.handleError(err, `Redis INCR error for key=${key}`);
+      return 0;
+    }
+  }
+
+  async expire(key: string, ttlSeconds: number): Promise<void> {
+    if (!(await this.ensureConnected())) return;
+
+    try {
+      await this.client!.expire(this.buildKey(key), ttlSeconds);
+    } catch (err) {
+      this.handleError(err, `Redis EXPIRE error for key=${key}`);
+    }
+  }
+
+  async ttl(key: string): Promise<number> {
+    if (!(await this.ensureConnected())) return -1;
+
+    try {
+      return await this.client!.ttl(this.buildKey(key));
+    } catch (err) {
+      this.handleError(err, `Redis TTL error for key=${key}`);
+      return -1;
+    }
+  }
+
   private handleError(error: unknown, context: string): void {
     const msg = error instanceof Error ? error.message : String(error);
     this.logger.error(`${context}: ${msg}`);

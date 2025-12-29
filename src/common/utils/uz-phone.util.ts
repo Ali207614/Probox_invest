@@ -5,7 +5,7 @@ export function normalizeUzPhone(phone: string): {
   digits: string;
   last9: string;
 } {
-  const digits = extractDigits(phone);
+  const digits: string = extractDigits(phone);
 
   if (digits.length < 9) {
     throw new Error('Invalid phone number');

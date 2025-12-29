@@ -17,9 +17,6 @@ export class SapService {
 
   constructor(private readonly hana: HanaService) {}
 
-  // ------------------------------------------------------------------
-  // Business Partner by phone
-  // ------------------------------------------------------------------
   async getBusinessPartnerByPhone(phone: string): Promise<IBusinessPartner[]> {
     const sql = loadSQL('sap/hana/queries/get-business-partner.sql').replace(
       /{{schema}}/g,
@@ -44,14 +41,11 @@ export class SapService {
     }
   }
 
-  // ------------------------------------------------------------------
-  // BP balance + monthly income
-  // ------------------------------------------------------------------
   async getBpBalanceAndMonthlyIncome(
     bpCode: string,
     incomeAccount: number,
   ): Promise<IBpMonthlyIncomeSummary> {
-    const sql = loadSQL('sap/hana/queries/get-bp-balance-and-monthly-income.sql').replace(
+    const sql: string = loadSQL('sap/hana/queries/get-bp-balance-and-monthly-income.sql').replace(
       /{{schema}}/g,
       this.schema,
     );
@@ -59,8 +53,11 @@ export class SapService {
     this.logger.log(`📦 [SAP] BP income summary: bp=${bpCode}`);
 
     try {
-      const params = [bpCode, bpCode, incomeAccount, bpCode, incomeAccount];
-      const rows = await this.hana.executeOnce<IBpMonthlyIncomeSummary>(sql, params);
+      const params: (string | number)[] = [bpCode, bpCode, incomeAccount, bpCode, incomeAccount];
+      const rows: IBpMonthlyIncomeSummary[] = await this.hana.executeOnce<IBpMonthlyIncomeSummary>(
+        sql,
+        params,
+      );
 
       return (
         rows?.[0] ?? {
@@ -77,9 +74,6 @@ export class SapService {
     }
   }
 
-  // ------------------------------------------------------------------
-  // Investor income summary (Initial / Additional / Reinvest / Dividend)
-  // ------------------------------------------------------------------
   async getInvestorIncomeSummary(
     bpCode: string,
     reinvestAccount: number,
@@ -94,10 +88,7 @@ export class SapService {
     );
 
     try {
-      const params = [
-        reinvestAccount, // ContraAct = ?
-        bpCode, // ShortName = ?
-      ];
+      const params = [reinvestAccount, bpCode];
 
       const rows: InvestorIncomeSummary[] = await this.hana.executeOnce<InvestorIncomeSummary>(
         sql,
@@ -148,7 +139,7 @@ export class SapService {
       const total = rows?.[0]?.total ?? 0;
 
       const cleanedRows: InvestorTransaction[] = rows.map(
-        ({ total, ...transaction }) => transaction,
+        ({ total: _total, ...transaction }) => transaction,
       );
 
       return {

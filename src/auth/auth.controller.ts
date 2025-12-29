@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  UnauthorizedException,
+  HttpCode,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -11,6 +19,8 @@ import type { AuthenticatedRequest } from '../common/types/authenticated-request
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { UserPayload } from '../common/interfaces/user-payload.interface';
+import { SendCodeRateLimitGuard } from '../common/guards/send-code-rate-limit.guard';
+import { SendCodeResponse } from '../common/types/send-code.type';
 
 @ApiTags('Auth-admin')
 @Controller('auth/users')
@@ -18,10 +28,12 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('send-code')
+  @UseGuards(SendCodeRateLimitGuard)
+  @HttpCode(200)
   @ApiOperation({ summary: 'Send verification code to phone number' })
-  @ApiResponse({ status: 201, description: 'Verification code sent successfully' })
+  @ApiResponse({ status: 200, description: 'Verification code sent successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  sendCode(@Body() dto: SmsDto): Promise<{ message: string; code: string }> {
+  sendCode(@Body() dto: SmsDto): Promise<SendCodeResponse> {
     return this.authService.sendVerificationCode(dto);
   }
 

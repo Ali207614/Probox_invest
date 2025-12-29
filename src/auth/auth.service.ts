@@ -20,9 +20,10 @@ import { InjectKnex } from 'nestjs-knex';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { UsersService } from '../users/users.service';
-import { IBusinessPartner } from '../common/interfaces/business-partner.interface';
 import { IUser } from '../common/interfaces/user.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
+import { SendCodeResponse } from '../common/types/send-code.type';
+import { normalizeUzPhone } from '../common/utils/uz-phone.util';
 
 @Injectable()
 export class AuthService {
@@ -37,20 +38,10 @@ export class AuthService {
 
   private readonly RESET_PREFIX = 'reset-code:';
 
-  async sendVerificationCode(dto: SmsDto): Promise<{ message: string; code: string }> {
-    const sapPartners: IBusinessPartner[] = await this.sapService.getBusinessPartnerByPhone(
-      dto.phone_main,
-    );
+  async sendVerificationCode(dto: SmsDto): Promise<SendCodeResponse> {
+    const { raw: phone } = normalizeUzPhone(dto.phone_main);
 
-    if (!sapPartners || sapPartners.length === 0) {
-      throw new NotFoundException({
-        message: 'This phone number is not registered in SAP',
-        location: 'sap_not_found',
-      });
-    }
-    const sapPartner: IBusinessPartner = sapPartners[0];
-
-    let user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
+    const user: IUser | undefined = await this.usersService.findByPhoneNumber(phone);
 
     if (user && user.status !== 'Pending') {
       throw new ConflictException({
@@ -60,8 +51,19 @@ export class AuthService {
     }
 
     if (!user) {
-      user = await this.usersService.createUser({
-        phone_main: dto.phone_main,
+      const sapPartners = await this.sapService.getBusinessPartnerByPhone(phone);
+
+      if (!sapPartners?.length) {
+        throw new NotFoundException({
+          message: 'This phone number is not registered in SAP',
+          location: 'sap_not_found',
+        });
+      }
+
+      const sapPartner = sapPartners[0];
+
+      await this.usersService.createUser({
+        phone_main: phone,
         phone_verified: false,
         status: 'Pending',
         sap_card_code: sapPartner.CardCode,
@@ -70,9 +72,28 @@ export class AuthService {
     }
 
     const code: string = Math.floor(100000 + Math.random() * 900000).toString();
-    await this.redisService.set(`verify:${user.phone_main}`, code, 300);
 
-    return { message: 'Verification code sent successfully', code };
+    const EXPIRES_IN = 300;
+    const RETRY_AFTER = 60;
+
+    await this.redisService.set(`verify:${phone}`, code, EXPIRES_IN);
+
+    const expiresAt = new Date(Date.now() + EXPIRES_IN * 1000).toISOString();
+
+    const res: SendCodeResponse = {
+      message: 'Verification code sent successfully',
+      data: {
+        expires_in: EXPIRES_IN,
+        expires_at: expiresAt,
+        retry_after: RETRY_AFTER,
+      },
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      res.code = code;
+    }
+
+    return res;
   }
 
   async verifyCode(dto: VerifyDto): Promise<{ message: string }> {
@@ -246,7 +267,6 @@ export class AuthService {
   }
 
   private async setUserSession(userId: string, token: string): Promise<void> {
-    console.log('set session session', userId);
     await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24); // 1 days
   }
 }
