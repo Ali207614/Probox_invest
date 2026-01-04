@@ -40,42 +40,101 @@ WHERE T0."ShortName" = ?
 SELECT MIN("RefDate") AS first_incoming_date
 FROM base
 WHERE is_incoming = 1
+    ),
+
+    dates AS (
+SELECT
+    /* first day of current month */
+    ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE)) AS this_month_start,
+    /* first day of last month */
+    ADD_MONTHS(ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE)), -1) AS last_month_start,
+    /* last day of last month */
+    ADD_DAYS(ADD_DAYS(CURRENT_DATE, 1 - DAYOFMONTH(CURRENT_DATE)), -1) AS last_month_end
+FROM DUMMY
+    ),
+
+    agg AS (
+SELECT
+    /* totals */
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_incoming = 1 AND b."RefDate" = fi.first_incoming_date
+    THEN b.signed_amount ELSE 0
+    END
+    ), 0) AS "initial_capital",
+
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_incoming = 1 AND b."RefDate" > fi.first_incoming_date
+    THEN b.signed_amount ELSE 0
+    END
+    ), 0) AS "additional_capital",
+
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_reinvest = 1 THEN b.signed_amount ELSE 0
+    END
+    ), 0) AS "reinvest_fund",
+
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_dividend = 1 THEN ABS(b.signed_amount) ELSE 0
+    END
+    ), 0) AS "dividend_paid",
+
+    /* monthly reinvest */
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_reinvest = 1
+    AND b."RefDate" >= d.this_month_start
+    THEN b.signed_amount ELSE 0
+    END
+    ), 0) AS "reinvest_this_month",
+
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_reinvest = 1
+    AND b."RefDate" >= d.last_month_start
+    AND b."RefDate" <= d.last_month_end
+    THEN b.signed_amount ELSE 0
+    END
+    ), 0) AS "reinvest_last_month",
+
+    /* monthly dividend */
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_dividend = 1
+    AND b."RefDate" >= d.this_month_start
+    THEN ABS(b.signed_amount) ELSE 0
+    END
+    ), 0) AS "dividend_this_month",
+
+    COALESCE(SUM(
+    CASE
+    WHEN b.is_dividend = 1
+    AND b."RefDate" >= d.last_month_start
+    AND b."RefDate" <= d.last_month_end
+    THEN ABS(b.signed_amount) ELSE 0
+    END
+    ), 0) AS "dividend_last_month"
+
+FROM base b
+    JOIN first_incoming fi ON 1=1
+    JOIN dates d ON 1=1
     )
 
 SELECT
-    /* Initial capital */
-    COALESCE(SUM(
-                     CASE
-                         WHEN b.is_incoming = 1
-                             AND b."RefDate" = fi.first_incoming_date
-                             THEN b.signed_amount ELSE 0
-                         END
-             ), 0) AS "initial_capital",
+    a.*,
 
-    /* Additional capital */
-    COALESCE(SUM(
-                     CASE
-                         WHEN b.is_incoming = 1
-                             AND b."RefDate" > fi.first_incoming_date
-                             THEN b.signed_amount ELSE 0
-                         END
-             ), 0) AS "additional_capital",
+    /* growth % (this vs last) */
+    CASE
+        WHEN a."reinvest_last_month" = 0 THEN NULL
+        ELSE ROUND((a."reinvest_this_month" - a."reinvest_last_month") / ABS(a."reinvest_last_month") * 100, 2)
+        END AS "reinvest_growth_percent",
 
-    /* Reinvest */
-    COALESCE(SUM(
-                     CASE
-                         WHEN b.is_reinvest = 1
-                             THEN b.signed_amount ELSE 0
-                         END
-             ), 0) AS "reinvest_fund",
+    CASE
+        WHEN a."dividend_last_month" = 0 THEN NULL
+        ELSE ROUND((a."dividend_this_month" - a."dividend_last_month") / ABS(a."dividend_last_month") * 100, 2)
+        END AS "dividend_growth_percent"
 
-    /* Dividend */
-    COALESCE(SUM(
-                     CASE
-                         WHEN b.is_dividend = 1
-                             THEN ABS(b.signed_amount) ELSE 0
-                         END
-             ), 0) AS "dividend_paid"
-
-FROM base b
-         JOIN first_incoming fi ON 1=1;
+FROM agg a;

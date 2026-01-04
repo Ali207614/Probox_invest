@@ -4,12 +4,12 @@ import { LoggerService } from 'src/common/logger/logger.service';
 import {
   IBpMonthlyIncomeSummary,
   IBusinessPartner,
-  InvestorIncomeSummary,
   InvestorTransaction,
 } from '../../common/interfaces/business-partner.interface';
 import { loadSQL } from '../../common/utils/sql-loader.util';
 import { normalizeUzPhone } from '../../common/utils/uz-phone.util';
 import { coerceNumericStringsDeep, parseNumericString } from '../../common/utils/number.util';
+import { InvestorMetricItem } from '../../common/interfaces/invester-summary.interface';
 
 @Injectable()
 export class SapService {
@@ -79,7 +79,10 @@ export class SapService {
   async getInvestorIncomeSummary(
     bpCode: string,
     reinvestAccount: number,
-  ): Promise<InvestorIncomeSummary> {
+  ): Promise<{
+    meta: { total: number; limit: number; offset: number };
+    data: InvestorMetricItem[];
+  }> {
     const sql = loadSQL('sap/hana/queries/get-bp-income-summary.sql').replace(
       /{{schema}}/g,
       this.schema,
@@ -91,17 +94,60 @@ export class SapService {
 
     try {
       const params: (string | number)[] = [reinvestAccount, bpCode];
+      const rows = await this.hana.executeOnce<Record<string, unknown>>(sql, params);
+      const r = rows?.[0] ?? {};
 
-      const rows: InvestorIncomeSummary[] = await this.hana.executeOnce<InvestorIncomeSummary>(
-        sql,
-        params,
-      );
+      const initial_capital = (parseNumericString(r['initial_capital']) as number) ?? 0;
+      const additional_capital = (parseNumericString(r['additional_capital']) as number) ?? 0;
+
+      const reinvest_total = (parseNumericString(r['reinvest_fund']) as number) ?? 0;
+      const reinvest_this_month = (parseNumericString(r['reinvest_this_month']) as number) ?? 0;
+      const reinvest_last_month = (parseNumericString(r['reinvest_last_month']) as number) ?? 0;
+      const reinvest_growth_percent =
+        r['reinvest_growth_percent'] == null
+          ? null
+          : ((parseNumericString(r['reinvest_growth_percent']) as number) ?? null);
+
+      const dividend_total = (parseNumericString(r['dividend_paid']) as number) ?? 0;
+      const dividend_this_month = (parseNumericString(r['dividend_this_month']) as number) ?? 0;
+      const dividend_last_month = (parseNumericString(r['dividend_last_month']) as number) ?? 0;
+      const dividend_growth_percent =
+        r['dividend_growth_percent'] == null
+          ? null
+          : ((parseNumericString(r['dividend_growth_percent']) as number) ?? null);
+
+      const data: InvestorMetricItem[] = [
+        {
+          key: 'initial_capital',
+          type: 'total_only',
+          total: initial_capital,
+        },
+        {
+          key: 'additional_capital',
+          type: 'total_only',
+          total: additional_capital,
+        },
+        {
+          key: 'reinvest',
+          type: 'monthly',
+          total: reinvest_total,
+          this_month: reinvest_this_month,
+          last_month: reinvest_last_month,
+          growth_percent: reinvest_growth_percent,
+        },
+        {
+          key: 'dividend',
+          type: 'monthly',
+          total: dividend_total,
+          this_month: dividend_this_month,
+          last_month: dividend_last_month,
+          growth_percent: dividend_growth_percent,
+        },
+      ];
 
       return {
-        initial_capital: (parseNumericString(rows[0].initial_capital) as number) ?? 0,
-        additional_capital: (parseNumericString(rows[0].additional_capital) as number) ?? 0,
-        reinvest_fund: (parseNumericString(rows[0].reinvest_fund) as number) ?? 0,
-        dividend_paid: (parseNumericString(rows[0].dividend_paid) as number) ?? 0,
+        meta: { total: data.length, limit: data.length, offset: 0 },
+        data,
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
