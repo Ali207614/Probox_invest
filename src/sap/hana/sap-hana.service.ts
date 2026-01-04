@@ -9,6 +9,7 @@ import {
 } from '../../common/interfaces/business-partner.interface';
 import { loadSQL } from '../../common/utils/sql-loader.util';
 import { normalizeUzPhone } from '../../common/utils/uz-phone.util';
+import { coerceNumericStringsDeep, parseNumericString } from '../../common/utils/number.util';
 
 @Injectable()
 export class SapService {
@@ -59,14 +60,15 @@ export class SapService {
         params,
       );
 
-      return (
-        rows?.[0] ?? {
-          balance: 0,
-          income_this_month: 0,
-          income_last_month: 0,
-          income_growth_percent: null,
-        }
-      );
+      return {
+        balance: (parseNumericString(rows[0].balance) as number) ?? 0,
+        income_this_month: (parseNumericString(rows[0].income_this_month) as number) ?? 0,
+        income_last_month: (parseNumericString(rows[0].income_last_month) as number) ?? 0,
+        income_growth_percent:
+          rows[0].income_growth_percent == null
+            ? null
+            : (parseNumericString(rows[0].income_growth_percent) as number),
+      };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error('❌ [SAP] getBpBalanceAndMonthlyIncome failed', message);
@@ -88,21 +90,19 @@ export class SapService {
     );
 
     try {
-      const params = [reinvestAccount, bpCode];
+      const params: (string | number)[] = [reinvestAccount, bpCode];
 
       const rows: InvestorIncomeSummary[] = await this.hana.executeOnce<InvestorIncomeSummary>(
         sql,
         params,
       );
 
-      return (
-        rows?.[0] ?? {
-          initial_capital: 0,
-          additional_capital: 0,
-          reinvest_fund: 0,
-          dividend_paid: 0,
-        }
-      );
+      return {
+        initial_capital: (parseNumericString(rows[0].initial_capital) as number) ?? 0,
+        additional_capital: (parseNumericString(rows[0].additional_capital) as number) ?? 0,
+        reinvest_fund: (parseNumericString(rows[0].reinvest_fund) as number) ?? 0,
+        dividend_paid: (parseNumericString(rows[0].dividend_paid) as number) ?? 0,
+      };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error('❌ [SAP] getInvestorIncomeSummary failed', message);
@@ -129,18 +129,19 @@ export class SapService {
     this.logger.log(`📦 [SAP] Investor transactions list: bp=${bpCode}`);
 
     try {
-      const params = [reinvestAccount, bpCode, limit, offset];
+      const params: (string | number)[] = [reinvestAccount, bpCode, limit, offset];
 
       const rows = await this.hana.executeOnce<InvestorTransaction & { total: number }>(
         sql,
         params,
       );
 
-      const total = rows?.[0]?.total ?? 0;
+      const total: number = (parseNumericString(rows?.[0]?.total) as number) ?? 0;
 
-      const cleanedRows: InvestorTransaction[] = rows.map(
-        ({ total: _total, ...transaction }) => transaction,
-      );
+      const cleanedRows: InvestorTransaction[] = rows.map((r) => {
+        const { total: _total, ...tx } = r as unknown as Record<string, unknown>;
+        return coerceNumericStringsDeep(tx) as unknown as InvestorTransaction;
+      });
 
       return {
         rows: cleanedRows,

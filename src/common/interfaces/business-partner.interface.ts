@@ -7,10 +7,10 @@ export interface IBusinessPartner {
 }
 
 export interface IBpMonthlyIncomeSummary {
-  Balance: number | string;
-  IncomeThisMonth: number | string;
-  IncomeLastMonth: number | string;
-  IncomeGrowthPercent: number | string | null;
+  balance: number | string;
+  income_this_month: number | string;
+  income_last_month: number | string;
+  income_growth_percent: number | string | null;
 }
 
 export interface InvestorIncomeSummary {
