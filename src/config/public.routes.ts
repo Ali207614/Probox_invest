@@ -1,4 +1,3 @@
-// src/config/public.routes.ts
 import { RequestMethod } from '@nestjs/common';
 
 export const PublicRoutes = [

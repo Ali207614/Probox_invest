@@ -1,4 +1,3 @@
-// src/config/maintenance-excluded.routes.ts
 import { RequestMethod } from '@nestjs/common';
 
 export const MaintenanceExcludedRoutes = [

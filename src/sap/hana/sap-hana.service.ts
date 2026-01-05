@@ -10,6 +10,7 @@ import { loadSQL } from '../../common/utils/sql-loader.util';
 import { normalizeUzPhone } from '../../common/utils/uz-phone.util';
 import { coerceNumericStringsDeep, parseNumericString } from '../../common/utils/number.util';
 import { InvestorMetricItem } from '../../common/interfaces/invester-summary.interface';
+import { PaginationResult } from '../../common/utils/pagination.util';
 
 @Injectable()
 export class SapService {
@@ -161,12 +162,7 @@ export class SapService {
     reinvestAccount: number,
     limit: number,
     offset: number,
-  ): Promise<{
-    rows: InvestorTransaction[];
-    total: number;
-    limit: number;
-    offset: number;
-  }> {
+  ): Promise<PaginationResult<InvestorTransaction>> {
     const sql = loadSQL('sap/hana/queries/get-bp-investor-transactions.sql').replace(
       /{{schema}}/g,
       this.schema,
