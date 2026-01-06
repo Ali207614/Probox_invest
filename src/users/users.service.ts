@@ -35,6 +35,8 @@ export class UsersService {
         'profile_picture',
         'created_at',
         'updated_at',
+        'device_fcm_token',
+        'device_type',
       ])
       .where({ id: user.id })
       .first();
@@ -177,5 +179,45 @@ export class UsersService {
     }
 
     await this.knex<IUser>(this.table).where({ phone_main: phone }).update(updateData);
+  }
+
+  // ===========================================================================================
+
+  async updateMe(
+    userId: string,
+    data: Partial<Pick<IUser, 'first_name' | 'last_name'>>,
+  ): Promise<{ message: string }> {
+    const updateData: Partial<IUser> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.first_name) updateData.first_name = data.first_name;
+    if (data.last_name) updateData.last_name = data.last_name;
+
+    await this.knex<IUser>(this.table).where({ id: userId }).update(updateData);
+
+    return { message: 'Profile updated successfully' };
+  }
+
+  async updatePhoneNumber(userId: string, phone: string): Promise<{ message: string }> {
+    const updateData: Partial<IUser> = {
+      updated_at: new Date().toISOString(),
+    };
+    updateData.phone_main = phone;
+    await this.knex<IUser>(this.table).where({ id: userId }).update(updateData);
+    return { message: 'Phone number updated successfully' };
+  }
+
+  async updateDeviceToken(
+    user_id: string,
+    device_token: string,
+    device_type: 'ios' | 'android',
+  ): Promise<{ message: string }> {
+    const updateData: Partial<IUser> = {
+      updated_at: new Date().toISOString(),
+    };
+    updateData.device_fcm_token = device_token;
+    updateData.device_type = device_type;
+    await this.knex<IUser>(this.table).where({ id: user_id }).update(updateData);
+    return { message: 'Device token updated successfully' };
   }
 }

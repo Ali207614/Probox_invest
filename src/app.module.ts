@@ -21,6 +21,7 @@ import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
 import { RateLimitedUserRoutes } from './config/user-rate-limited.routes';
 import { SapModule } from './sap/sap.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { SapModule } from './sap/sap.module';
     KnexModule.forRoot({ config: knexConfig }),
     UsersModule,
     SapModule,
+    NotificationsModule,
   ],
   controllers: [FeatureController, UsersController, AuthController],
   providers: [FeatureService, LoggerService, UsersService],

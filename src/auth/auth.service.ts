@@ -230,8 +230,8 @@ export class AuthService {
 
     const code: string = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const EXPIRES_IN = 300;
-    const RETRY_AFTER = 60;
+    const EXPIRES_IN = 300; // 5 minutes
+    const RETRY_AFTER = 60; // 1 minute
 
     await this.redisService.set(`${this.RESET_PREFIX}${phone}`, code, EXPIRES_IN);
 
