@@ -30,7 +30,7 @@ export class NotificationsService {
 
     const tokens = (await this.knex('users')
       .where({ id: user_id })
-      .pluck('device_fcm_token')) as string[];
+      .pluck('device_token')) as string[];
 
     if (tokens.length > 0) {
       await this.firebase_service.sendPushNotification(

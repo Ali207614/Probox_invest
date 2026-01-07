@@ -31,5 +31,5 @@ export class LoginDto {
   @MaxLength(4096, {
     context: { location: 'invalid_device_token_length_max' },
   })
-  device_token!: string;
+  device_token: string;
 }
