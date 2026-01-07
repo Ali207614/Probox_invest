@@ -28,9 +28,9 @@ export class NotificationsService {
       created_at: new Date(),
     });
 
-    const tokens = (await this.knex('user_devices')
-      .where({ user_id: user_id })
-      .pluck('fcm_token')) as string[];
+    const tokens = (await this.knex('users')
+      .where({ id: user_id })
+      .pluck('device_fcm_token')) as string[];
 
     if (tokens.length > 0) {
       await this.firebase_service.sendPushNotification(

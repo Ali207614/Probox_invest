@@ -28,7 +28,6 @@ import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
 import { GetMeResponse } from '../common/interfaces/user.interface';
 import { UpdateMeDto } from './dto/update-me.dto';
-import { UpdateDeviceTokenDto } from './dto/update-device-token.dto';
 
 @Controller('users')
 @ApiBearerAuth()
@@ -115,19 +114,5 @@ export class UsersController {
     @Body() updateMeDto: UpdateMeDto,
   ): Promise<{ message: string }> {
     return this.usersService.updateMe(req.user.id, updateMeDto);
-  }
-
-  @UseGuards(JwtUserAuthGuard)
-  @Post('me/device-token')
-  @ApiOperation({ summary: 'Update the current user device token' })
-  async updateDeviceToken(
-    @Req() req: AuthenticatedRequest,
-    @Body() updateDeviceTokenDto: UpdateDeviceTokenDto,
-  ): Promise<{ message: string }> {
-    return this.usersService.updateDeviceToken(
-      req.user.id,
-      updateDeviceTokenDto.token,
-      updateDeviceTokenDto.device_type,
-    );
   }
 }

@@ -13,8 +13,7 @@ export interface IUser {
   password?: string | null;
   profile_picture: string | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
-  device_fcm_token: string;
-  device_type: 'ios' | 'android';
+  device_token: string;
   created_at: string;
   updated_at: string | null;
 }

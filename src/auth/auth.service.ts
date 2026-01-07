@@ -148,6 +148,7 @@ export class AuthService {
     await this.usersService.updateUserByPhone(dto.phone_main, {
       password: hashedPassword,
       status: 'Open',
+      device_token: dto.device_token,
     });
 
     const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
@@ -180,6 +181,14 @@ export class AuthService {
         message: 'Invalid credentials',
         location: 'invalid_login',
       });
+    }
+
+    if (user.device_token !== dto.device_token) {
+      await this.knex('users')
+        .where({
+          id: user.id,
+        })
+        .update({ device_token: dto.device_token });
     }
 
     const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
@@ -280,6 +289,6 @@ export class AuthService {
   }
 
   private async setUserSession(userId: string, token: string): Promise<void> {
-    await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24); // 1 days
+    await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24); // 1 day
   }
 }

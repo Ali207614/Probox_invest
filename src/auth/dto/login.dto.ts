@@ -20,4 +20,16 @@ export class LoginDto {
     context: { location: 'invalid_password_length_max' },
   })
   password!: string;
+
+  @ApiProperty({ description: 'Device token' })
+  @IsString({
+    context: { location: 'invalid_device_token' },
+  })
+  @MinLength(1, {
+    context: { location: 'invalid_device_token_length_min' },
+  })
+  @MaxLength(4096, {
+    context: { location: 'invalid_device_token_length_max' },
+  })
+  device_token!: string;
 }
