@@ -22,6 +22,7 @@ import { AuthModule } from './auth/auth.module';
 import { RateLimitedUserRoutes } from './config/user-rate-limited.routes';
 import { SapModule } from './sap/sap.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AdminsModule } from './admins/admins.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     UsersModule,
     SapModule,
     NotificationsModule,
+    AdminsModule,
   ],
   controllers: [FeatureController, UsersController, AuthController],
   providers: [FeatureService, LoggerService, UsersService],

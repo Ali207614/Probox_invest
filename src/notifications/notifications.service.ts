@@ -5,6 +5,7 @@ import { FirebaseService } from './firebase.service';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 import { IUser } from 'src/common/interfaces/user.interface';
+import { PaginationResult } from 'src/common/utils/pagination.util';
 
 @Injectable()
 export class NotificationsService {
@@ -49,11 +50,9 @@ export class NotificationsService {
 
   async getNotificationsByUser(
     user_id: string,
-    page: number,
+    offset: number,
     limit: number,
-  ): Promise<{ data: NotificationResponseDto[]; message: string }> {
-    const offset = (page - 1) * limit;
-
+  ): Promise<PaginationResult<NotificationResponseDto>> {
     const rows = await this.knex('notifications')
       .select('*')
       .where({ user_id })
@@ -61,9 +60,13 @@ export class NotificationsService {
       .limit(limit)
       .offset(offset);
 
+    const [{ total }] = await this.knex('notifications').where({ user_id }).count('*');
+
     return {
-      data: rows as NotificationResponseDto[],
-      message: 'Notifications retrieved successfully',
+      rows: rows as NotificationResponseDto[],
+      total: Number(total),
+      limit,
+      offset,
     };
   }
 

@@ -36,6 +36,7 @@ export class UsersService {
         'created_at',
         'updated_at',
         'device_token',
+        'is_active',
       ])
       .where({ id: user.id })
       .first();

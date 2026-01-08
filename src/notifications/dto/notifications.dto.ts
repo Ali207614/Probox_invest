@@ -13,7 +13,7 @@ export class GetNotificationsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page?: number = 1;
+  offset?: number = 0;
 
   @ApiPropertyOptional({
     description: 'Number of items per page',
