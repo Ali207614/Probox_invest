@@ -13,6 +13,7 @@ export interface IUser {
   password?: string | null;
   profile_picture: string | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
+  is_active: boolean;
   device_token: string;
   created_at: string;
   updated_at: string | null;

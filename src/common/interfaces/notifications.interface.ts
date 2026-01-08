@@ -1,10 +1,12 @@
+import { NotificationType } from '../enums/notification-type.enum';
+
 export interface INotification {
   id: string;
   user_id: string;
   title: string;
   body: string;
-  type: 'TRANSACTION' | 'SYSTEM' | 'EVENT';
+  type: NotificationType;
   is_read: boolean;
-  data: any;
-  created_at: string;
+  data?: Record<string, any>;
+  created_at: Date;
 }

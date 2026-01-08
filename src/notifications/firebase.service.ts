@@ -33,8 +33,27 @@ export class FirebaseService implements OnModuleInit {
     };
 
     try {
-      await admin.messaging().sendEachForMulticast(message);
-      return { message: 'Push notification sent successfully' };
+      const response = await admin.messaging().sendEachForMulticast(message);
+
+      console.log(`${response.successCount} messages were sent successfully`);
+
+      const failedTokens: string[] = [];
+
+      if (response.failureCount > 0) {
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            failedTokens.push(tokens[idx]);
+            console.error(`Token ${tokens[idx]} failed:`, resp.error);
+          }
+        });
+
+        if (failedTokens.length > 0) {
+          console.error(`Failed to send notification to ${failedTokens.length} tokens`);
+        }
+      }
+      return failedTokens.length > 0
+        ? { message: 'Failed to send push notification' }
+        : { message: 'Push notification sent successfully' };
     } catch (error) {
       console.error('Error sending push notification:', error);
       return { message: 'Failed to send push notification' };

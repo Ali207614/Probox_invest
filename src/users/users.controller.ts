@@ -38,7 +38,6 @@ export class UsersController {
     private readonly usersService: UsersService,
   ) {}
 
-  @UseGuards(JwtUserAuthGuard)
   @Get('me')
   async getMe(@Req() req: AuthenticatedRequest): Promise<GetMeResponse> {
     return this.usersService.getMe(req.user);
@@ -74,7 +73,6 @@ export class UsersController {
     return this.sapService.getInvestorTransactions(cardCode, 8710, parsedLimit, parsedOffset);
   }
 
-  @UseGuards(JwtUserAuthGuard)
   @Post(':cardCode/profile-picture')
   @ApiOperation({ summary: 'Upload business partner profile picture' })
   @ApiConsumes('multipart/form-data')
@@ -96,7 +94,6 @@ export class UsersController {
     return this.usersService.uploadProfilePicture(req.user, cardCode, file);
   }
 
-  @UseGuards(JwtUserAuthGuard)
   @Delete(':cardCode/profile-picture')
   @ApiOperation({ summary: 'Delete business partner profile picture' })
   async deleteProfilePicture(
@@ -106,7 +103,6 @@ export class UsersController {
     return this.usersService.deleteProfilePicture(req.user, cardCode);
   }
 
-  @UseGuards(JwtUserAuthGuard)
   @Patch('me/name')
   @ApiOperation({ summary: 'Update the current user profile' })
   async updateMe(
