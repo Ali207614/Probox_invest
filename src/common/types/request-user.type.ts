@@ -1,11 +1,6 @@
 import { Request } from 'express';
+import { UserPayload } from '../interfaces/user-payload.interface';
 
 export interface UserRequest extends Request {
-  user?: {
-    id: string;
-    phone_main: string;
-    sap_card_code: string;
-    role: string;
-    [key: string]: unknown;
-  };
+  user?: UserPayload;
 }

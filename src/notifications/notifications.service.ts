@@ -6,17 +6,20 @@ import { SendNotificationDto } from './dto/send-notification.dto';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 import { IUser } from 'src/common/interfaces/user.interface';
 import { PaginationResult } from 'src/common/utils/pagination.util';
+import { LoggerService } from 'src/common/logger/logger.service';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectKnex() private readonly knex: Knex,
-    private readonly firebase_service: FirebaseService,
+    private readonly firebaseService: FirebaseService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   async sendToUser(user_id: string, payload: SendNotificationDto): Promise<void> {
-    console.log('Sending notification...');
-    console.log('Trying to store the data into database...');
+    this.loggerService.log(`[Notification] Sending notification to user: ${user_id}`);
+    this.loggerService.log('[Notification] Storing the data into database...');
+
     await this.knex('notifications').insert({
       user_id: user_id,
       title: payload.title,
@@ -26,23 +29,26 @@ export class NotificationsService {
       created_at: new Date(),
     });
 
-    console.log('Storing successful. Trying to fetch device tokens from database...');
+    this.loggerService.log('[Notification] Storing successful. Fetching device tokens...');
 
     const tokens = (await this.knex('users')
       .where({ id: user_id })
       .pluck('device_token')) as string[];
 
-    console.log('Tokens fetched. Trying to send push notification...');
-
     if (tokens.length > 0) {
-      const sender = await this.firebase_service.sendPushNotification(
+      this.loggerService.log(
+        `[Notification] Tokens fetched (${tokens.length}). Sending push notification...`,
+      );
+      const sender = await this.firebaseService.sendPushNotification(
         tokens,
         payload.title,
         payload.body,
         payload.data,
       );
 
-      console.log(sender);
+      this.loggerService.log(`[Notification] Push result: ${JSON.stringify(sender)}`);
+    } else {
+      this.loggerService.warn(`[Notification] No device tokens found for user: ${user_id}`);
     }
 
     return;
@@ -92,16 +98,18 @@ export class NotificationsService {
         .pluck('device_token')) as string[];
     }
 
-    console.log('Sending push notifications...');
+    this.loggerService.log(
+      `[Notification] Sending push notifications to ${users.length} tokens...`,
+    );
 
-    const sender = await this.firebase_service.sendPushNotification(
+    const sender = await this.firebaseService.sendPushNotification(
       users,
       payload.title,
       payload.body,
       payload.data,
     );
 
-    console.log(sender);
+    this.loggerService.log(`[Notification] Multi-push result: ${JSON.stringify(sender)}`);
 
     return sender;
   }

@@ -9,6 +9,7 @@ import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { UsersModule } from '../users/users.module';
 import { JwtUserStrategy } from '../common/strategies/jwt-user.strategy';
 import { SapModule } from '../sap/sap.module';
+import { AdminsModule } from '../admins/admins.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SapModule } from '../sap/sap.module';
     RedisModule,
     FeatureModule,
     UsersModule,
+    AdminsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

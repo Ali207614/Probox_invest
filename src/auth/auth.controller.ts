@@ -50,14 +50,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify the received code' })
   @ApiOkResponse({ type: MessageResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid code' })
+  @HttpCode(200)
   verifyCode(@Body() dto: VerifyDto): Promise<{ message: string }> {
     return this.authService.verifyCode(dto);
   }
 
   @Post('register')
   @ApiOperation({ summary: 'Complete registration' })
-  @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiResponse({ status: 200, description: 'User registered successfully' })
   @ApiCreatedResponse({ type: TokenResponseDto })
+  @HttpCode(200)
   completeRegister(@Body() dto: RegisterDto): Promise<{ access_token: string }> {
     return this.authService.completeRegistration(dto);
   }
@@ -65,10 +67,21 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Login and receive access token' })
   @ApiOkResponse({ type: TokenResponseDto })
+  @HttpCode(200)
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   login(@Body() dto: LoginDto): Promise<{ access_token: string }> {
     return this.authService.login(dto);
+  }
+
+  @Post('admin/login')
+  @ApiOperation({ summary: 'Admin login and receive access token' })
+  @ApiOkResponse({ type: TokenResponseDto })
+  @HttpCode(200)
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  adminLogin(@Body() dto: LoginDto): Promise<{ access_token: string }> {
+    return this.authService.adminLogin(dto);
   }
 
   @Post('forgot-password')
@@ -83,6 +96,7 @@ export class AuthController {
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password using reset code' })
   @ApiOkResponse({ type: MessageResponseDto })
+  @HttpCode(200)
   @ApiResponse({ status: 200, description: 'Password reset successful' })
   resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
     return this.authService.resetPassword(dto);
@@ -93,6 +107,7 @@ export class AuthController {
   @UseGuards(JwtUserAuthGuard)
   @ApiOperation({ summary: 'Logout current admin' })
   @ApiOkResponse({ type: MessageResponseDto })
+  @HttpCode(200)
   @ApiResponse({ status: 200, description: 'Logged out successfully' })
   logout(
     @CurrentUser() user: UserPayload,

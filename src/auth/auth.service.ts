@@ -24,6 +24,8 @@ import { IUser } from '../common/interfaces/user.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
 import { SendCodeResponse } from '../common/types/send-code.type';
 import { normalizeUzPhone } from '../common/utils/uz-phone.util';
+import { AdminsService } from '../admins/admins.service';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +36,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly sapService: SapService,
+    private readonly adminsService: AdminsService,
   ) {}
 
   private readonly RESET_PREFIX = 'reset-code:';
@@ -151,7 +154,12 @@ export class AuthService {
       device_token: dto.device_token,
     });
 
-    const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
+    const payload = {
+      id: user.id,
+      phone_main: user.phone_main,
+      sap_card_code: user.sap_card_code,
+      roles: [Role.USER],
+    };
     const token: string = this.jwtService.sign(payload);
 
     await this.setUserSession(user.id, token);
@@ -191,10 +199,52 @@ export class AuthService {
         .update({ device_token: dto.device_token });
     }
 
-    const payload = { id: user.id, phone_main: user.phone_main, sap_card_code: user.sap_card_code };
+    const payload = {
+      id: user.id,
+      phone_main: user.phone_main,
+      sap_card_code: user.sap_card_code,
+      roles: [Role.USER],
+    };
     const token: string = this.jwtService.sign(payload);
 
     await this.setUserSession(user.id, token);
+
+    return { access_token: token };
+  }
+
+  async adminLogin(dto: LoginDto): Promise<{ access_token: string }> {
+    const admin = await this.adminsService.findByPhoneNumber(dto.phone_main);
+
+    if (!admin) {
+      throw new UnauthorizedException({
+        message: 'Invalid credentials',
+        location: 'invalid_login',
+      });
+    }
+
+    if (admin.status !== 'Open' || !admin.is_active) {
+      throw new ForbiddenException({
+        message: 'Your account is suspended or not active. Please contact support.',
+        location: 'account_inactive',
+      });
+    }
+
+    if (!(await bcrypt.compare(dto.password, admin.password || ''))) {
+      throw new UnauthorizedException({
+        message: 'Invalid credentials',
+        location: 'invalid_login',
+      });
+    }
+
+    const payload = {
+      id: admin.id as string,
+      phone_main: admin.phone_main,
+      sap_card_code: admin.sap_card_code,
+      roles: [Role.ADMIN],
+    };
+    const token: string = this.jwtService.sign(payload);
+
+    await this.setUserSession(admin.id as string, token);
 
     return { access_token: token };
   }

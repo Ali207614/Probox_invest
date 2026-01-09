@@ -1,10 +1,14 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
+import { LoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private readonly loggerService: LoggerService,
+  ) {}
 
   onModuleInit(): void {
     if (admin.apps.length === 0) {
@@ -35,7 +39,7 @@ export class FirebaseService implements OnModuleInit {
     try {
       const response = await admin.messaging().sendEachForMulticast(message);
 
-      console.log(`${response.successCount} messages were sent successfully`);
+      this.loggerService.log(`${response.successCount} messages were sent successfully`);
 
       const failedTokens: string[] = [];
 
@@ -43,19 +47,22 @@ export class FirebaseService implements OnModuleInit {
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
             failedTokens.push(tokens[idx]);
-            console.error(`Token ${tokens[idx]} failed:`, resp.error);
+            this.loggerService.error(`Token ${tokens[idx]} failed:`, resp.error?.message);
           }
         });
 
         if (failedTokens.length > 0) {
-          console.error(`Failed to send notification to ${failedTokens.length} tokens`);
+          this.loggerService.error(`Failed to send notification to ${failedTokens.length} tokens`);
         }
       }
       return failedTokens.length > 0
         ? { message: 'Failed to send push notification' }
         : { message: 'Push notification sent successfully' };
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      this.loggerService.error(
+        'Error sending push notification:',
+        error instanceof Error ? error.stack : String(error),
+      );
       return { message: 'Failed to send push notification' };
     }
   }

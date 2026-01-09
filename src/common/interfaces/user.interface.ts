@@ -14,6 +14,7 @@ export interface IUser {
   profile_picture: string | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
   is_active: boolean;
+  language: string;
   device_token: string;
   created_at: string;
   updated_at: string | null;
@@ -22,3 +23,7 @@ export interface IUser {
 export type GetMeResponse = Omit<IUser, 'password'> & {
   profile_picture_urls: ImageUrls | null;
 };
+
+export interface UpdateUserResponse {
+  message: string;
+}

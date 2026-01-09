@@ -26,7 +26,7 @@ import { PaginationResult } from '../common/utils/pagination.util';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
-import { GetMeResponse } from '../common/interfaces/user.interface';
+import { GetMeResponse, UpdateUserResponse } from '../common/interfaces/user.interface';
 import { UpdateMeDto } from './dto/update-me.dto';
 
 @Controller('users')
@@ -105,10 +105,10 @@ export class UsersController {
 
   @Patch('me/name')
   @ApiOperation({ summary: 'Update the current user profile' })
-  async updateMe(
+  async update(
     @Req() req: AuthenticatedRequest,
     @Body() updateMeDto: UpdateMeDto,
-  ): Promise<{ message: string }> {
-    return this.usersService.updateMe(req.user.id, updateMeDto);
+  ): Promise<UpdateUserResponse> {
+    return this.usersService.update(req.user.id, updateMeDto);
   }
 }
