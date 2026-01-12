@@ -13,6 +13,7 @@ exports.up = async function (knex) {
     table.string('password');
     table.boolean('is_protected').defaultTo(false);
     table.string('sap_card_code').nullable().index()
+    table.string('sap_phone_number');
     table.string('sap_card_name')
     table.string('passport_series');
     table.date('birth_date');

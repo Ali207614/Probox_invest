@@ -85,6 +85,7 @@ export class UsersService {
         status: data.status,
         sap_card_code: data.sap_card_code,
         sap_card_name: data.sap_name,
+        sap_phone_number: data.phone_main,
       })
       .returning('*');
 

@@ -9,6 +9,7 @@ export interface IUser {
   username?: string | null;
   sap_card_code?: string | null;
   sap_card_name?: string | null;
+  sap_phone_number?: string | null;
   phone_verified: boolean;
   password?: string | null;
   profile_picture: string | null;
