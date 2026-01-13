@@ -36,7 +36,7 @@ export class UsersController {
   constructor(
     private readonly sapService: SapService,
     private readonly usersService: UsersService,
-  ) { }
+  ) {}
 
   @Get('me')
   async getMe(@Req() req: AuthenticatedRequest): Promise<GetMeResponse> {

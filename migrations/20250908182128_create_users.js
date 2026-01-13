@@ -23,7 +23,7 @@ exports.up = async function (knex) {
     table.boolean('is_active').defaultTo(true);
     table.enu('status', ['Pending', 'Open', 'Deleted', 'Banned']).defaultTo('Open');
     table.text('profile_picture', 255).nullable()
-    table.string('device_token').notNullable();
+    table.string('device_token');
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
 
