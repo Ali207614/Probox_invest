@@ -36,7 +36,7 @@ export class UsersController {
   constructor(
     private readonly sapService: SapService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   @Get('me')
   async getMe(@Req() req: AuthenticatedRequest): Promise<GetMeResponse> {
@@ -103,7 +103,7 @@ export class UsersController {
     return this.usersService.deleteProfilePicture(req.user, cardCode);
   }
 
-  @Patch('me/name')
+  @Patch('me')
   @ApiOperation({ summary: 'Update the current user profile' })
   async update(
     @Req() req: AuthenticatedRequest,
