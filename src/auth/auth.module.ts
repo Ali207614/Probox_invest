@@ -10,6 +10,7 @@ import { UsersModule } from '../users/users.module';
 import { JwtUserStrategy } from '../common/strategies/jwt-user.strategy';
 import { SapModule } from '../sap/sap.module';
 import { AdminsModule } from '../admins/admins.module';
+import { LoggerModule } from 'src/common/logger/logger.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AdminsModule } from '../admins/admins.module';
     FeatureModule,
     UsersModule,
     AdminsModule,
+    LoggerModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

@@ -26,7 +26,6 @@ import type { AuthenticatedRequest } from '../common/types/authenticated-request
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { UserPayload } from '../common/interfaces/user-payload.interface';
-import { SendCodeRateLimitGuard } from '../common/guards/send-code-rate-limit.guard';
 import { SendCodeResponse } from '../common/types/send-code.type';
 import { MessageResponseDto } from './dto/message.response.dto';
 import { TokenResponseDto } from './dto/token.response.dto';
@@ -37,7 +36,6 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('send-code')
-  @UseGuards(SendCodeRateLimitGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Send verification code to phone number' })
   @ApiOkResponse({ type: SendCodeResponseDto })
@@ -85,7 +83,6 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  @UseGuards(SendCodeRateLimitGuard)
   @HttpCode(200)
   @ApiOperation({ summary: 'Send verification code to phone number' })
   @ApiOkResponse({ type: SendCodeResponseDto })

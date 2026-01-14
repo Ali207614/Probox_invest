@@ -44,9 +44,9 @@ export class AdminsService {
     };
   }
 
-  async updateUser(user: IUser): Promise<IUser> {
+  async updateUser(id: string, user: IUser): Promise<IUser> {
     const [updatedUser] = await this.knex<IUser>('users')
-      .where({ id: user.id })
+      .where({ id: id })
       .update(user)
       .returning('*');
 

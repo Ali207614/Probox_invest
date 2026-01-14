@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query, Post } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, Post, Param } from '@nestjs/common';
 import { AdminsService } from './admins.service';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -29,14 +29,14 @@ export class AdminsController {
     return this.adminsService.getAdmins(user.id, Number(offset), Number(limit));
   }
 
-  @Post()
+  @Post('update/:id')
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create admin (Super admin only)' })
-  async updateUser(user: IUser): Promise<IUser> {
-    return this.adminsService.updateUser(user);
+  @ApiOperation({ summary: 'Update admin (Super admin only)' })
+  async updateUser(@Param('id') id: string, user: IUser): Promise<IUser> {
+    return this.adminsService.updateUser(id, user);
   }
 
-  @Post()
+  @Post('create')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Create admin (Super admin only)' })
   async createAdmin(admin: Admin, @CurrentUser() user: UserPayload): Promise<Admin> {
