@@ -11,6 +11,7 @@ import {
   Delete,
   Body,
   Patch,
+  HttpCode,
 } from '@nestjs/common';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { SapService } from '../sap/hana/sap-hana.service';
@@ -28,6 +29,8 @@ import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
 import { GetMeResponse, UpdateUserResponse } from '../common/interfaces/user.interface';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { InvestorTransactionsQueryDto } from './dto/investor-transactions-query.dto';
+import { InvestorTransactionsFilterDto } from './dto/investor-transactions-filter.dto';
 
 @Controller('users')
 @ApiBearerAuth()
@@ -59,18 +62,16 @@ export class UsersController {
   }
 
   @Get('me/investor-transactions')
+  @HttpCode(200)
   @UseInterceptors(PaginationInterceptor)
   async getMyInvestorTransactions(
     @Req() req: AuthenticatedRequest,
-    @Query('limit') limit = '20',
-    @Query('offset') offset = '0',
+    @Query() query: InvestorTransactionsQueryDto,
+    @Body() filters: InvestorTransactionsFilterDto,
   ): Promise<PaginationResult<InvestorTransaction>> {
     const cardCode = req.user.sap_card_code;
 
-    const parsedLimit = Math.min(Number(limit) || 20, 100);
-    const parsedOffset = Number(offset) || 0;
-
-    return this.sapService.getInvestorTransactions(cardCode, 8710, parsedLimit, parsedOffset);
+    return this.sapService.getInvestorTransactions(cardCode, 8710, query, filters);
   }
 
   @Post(':cardCode/profile-picture')

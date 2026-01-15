@@ -6,6 +6,12 @@ import {
   IBusinessPartner,
   InvestorTransaction,
 } from '../../common/interfaces/business-partner.interface';
+import { InvestorTransactionsQueryDto } from '../../users/dto/investor-transactions-query.dto';
+import {
+  InvestorTransactionsFilterDto,
+  TransactionDirection,
+  TransactionType,
+} from '../../users/dto/investor-transactions-filter.dto';
 import { loadSQL } from '../../common/utils/sql-loader.util';
 import { normalizeUzPhone } from '../../common/utils/uz-phone.util';
 import { coerceNumericStringsDeep, parseNumericString } from '../../common/utils/number.util';
@@ -160,18 +166,86 @@ export class SapService {
   async getInvestorTransactions(
     bpCode: string,
     reinvestAccount: number,
-    limit: number,
-    offset: number,
+    query: InvestorTransactionsQueryDto,
+    filters: InvestorTransactionsFilterDto,
   ): Promise<PaginationResult<InvestorTransaction>> {
+    const { limit = 20, offset = 0 } = query;
+    const { start_date, end_date, types, direction } = filters;
+
     const sql = loadSQL('sap/hana/queries/get-bp-investor-transactions.sql').replace(
       /{{schema}}/g,
       this.schema,
     );
 
-    this.logger.log(`📦 [SAP] Investor transactions list: bp=${bpCode}`);
+    this.logger.log(
+      `📦 [SAP] Investor transactions list: bp=${bpCode}, filters=${JSON.stringify({
+        ...query,
+        ...filters,
+      })}`,
+    );
 
     try {
-      const params: (string | number)[] = [reinvestAccount, bpCode, limit, offset];
+      const conditions: string[] = [];
+      const filterParams: (string | number)[] = [];
+
+      if (start_date) {
+        conditions.push(`b."RefDate" >= ?`);
+        filterParams.push(start_date);
+      }
+
+      if (end_date) {
+        conditions.push(`b."RefDate" <= ?`);
+        filterParams.push(end_date);
+      }
+
+      if (direction) {
+        if (direction === TransactionDirection.INCOME) {
+          conditions.push(`b.amount > 0`);
+        } else if (direction === TransactionDirection.OUTCOME) {
+          conditions.push(`b.amount < 0`);
+        }
+      }
+
+      if (types && types.length > 0) {
+        const typeConditions: string[] = [];
+        for (const type of types) {
+          switch (type) {
+            case TransactionType.REINVEST:
+              typeConditions.push(`b.is_reinvest = 1`);
+              break;
+            case TransactionType.DIVIDEND:
+              typeConditions.push(`b.is_dividend = 1`);
+              break;
+            case TransactionType.INITIAL_CAPITAL:
+              typeConditions.push(`(b.is_incoming = 1 AND b."RefDate" = fi.first_incoming_date)`);
+              break;
+            case TransactionType.ADDITIONAL_CAPITAL:
+              typeConditions.push(`(b.is_incoming = 1 AND b."RefDate" <> fi.first_incoming_date)`);
+              break;
+            case TransactionType.OTHER:
+              typeConditions.push(
+                `(b.is_reinvest = 0 AND b.is_dividend = 0 AND b.is_incoming = 0)`,
+              );
+              break;
+          }
+        }
+        if (typeConditions.length > 0) {
+          conditions.push(`(${typeConditions.join(' OR ')})`);
+        }
+      }
+
+      let finalSql = sql;
+      if (conditions.length > 0) {
+        const whereClause = `WHERE ${conditions.join(' AND ')} `;
+        finalSql = finalSql.replace('ORDER BY', `${whereClause}ORDER BY`);
+      }
+
+      if (start_date) {
+        finalSql = finalSql.replace(/ORDER BY([\s\S]+?)DESC([\s\S]+?)DESC/, 'ORDER BY$1ASC$2ASC');
+      }
+
+      // Params order: [reinvestAccount, bpCode] from Base CTE, then [filterParams], then [limit, offset]
+      const params: (string | number)[] = [reinvestAccount, bpCode, ...filterParams, limit, offset];
 
       const totalsSql = `
         SELECT
@@ -184,7 +258,7 @@ export class SapService {
       `;
 
       const [rows, totalsRow] = await Promise.all([
-        this.hana.executeOnce<InvestorTransaction & { total: number }>(sql, params),
+        this.hana.executeOnce<InvestorTransaction & { total: number }>(finalSql, params),
         this.hana.executeOnce<{ total_income: number; total_outcome: number }>(totalsSql, [bpCode]),
       ]);
 
