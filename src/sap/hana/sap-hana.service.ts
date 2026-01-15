@@ -173,12 +173,24 @@ export class SapService {
     try {
       const params: (string | number)[] = [reinvestAccount, bpCode, limit, offset];
 
-      const rows = await this.hana.executeOnce<InvestorTransaction & { total: number }>(
-        sql,
-        params,
-      );
+      const totalsSql = `
+        SELECT
+            SUM(CASE WHEN (T0."Credit" - T0."Debit") > 0 THEN (T0."Credit" - T0."Debit") ELSE 0 END) AS "total_income",
+            SUM(CASE WHEN (T0."Credit" - T0."Debit") < 0 THEN (T0."Credit" - T0."Debit") ELSE 0 END) AS "total_outcome"
+        FROM ${this.schema}.JDT1 T0
+        JOIN ${this.schema}.OJDT H ON H."TransId" = T0."TransId"
+        WHERE T0."ShortName" = ?
+          AND H."StornoToTr" IS NULL
+      `;
+
+      const [rows, totalsRow] = await Promise.all([
+        this.hana.executeOnce<InvestorTransaction & { total: number }>(sql, params),
+        this.hana.executeOnce<{ total_income: number; total_outcome: number }>(totalsSql, [bpCode]),
+      ]);
 
       const total: number = (parseNumericString(rows?.[0]?.total) as number) ?? 0;
+      const total_income = (parseNumericString(totalsRow?.[0]?.total_income) as number) ?? 0;
+      const total_outcome = (parseNumericString(totalsRow?.[0]?.total_outcome) as number) ?? 0;
 
       const cleanedRows: InvestorTransaction[] = rows.map((r) => {
         const { total: _total, ...tx } = r as unknown as Record<string, unknown>;
@@ -190,6 +202,8 @@ export class SapService {
         total,
         limit,
         offset,
+        total_income,
+        total_outcome,
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

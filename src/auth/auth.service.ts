@@ -45,8 +45,8 @@ export class AuthService {
   ) {}
 
   private readonly REDIS_PREFIX = {
-    VERIFY: 'verify',
-    RESET: 'reset-code',
+    verify: 'verify',
+    reset: 'reset-code',
   };
 
   async sendCode(phone: string, type: 'verify' | 'reset'): Promise<SendCode> {
@@ -181,7 +181,7 @@ export class AuthService {
   }
 
   async verifyCode(dto: VerifyDto): Promise<{ message: string }> {
-    const storedCode = await this.redisService.get(`${this.REDIS_PREFIX.VERIFY}:${dto.phone_main}`);
+    const storedCode = await this.redisService.get(`${this.REDIS_PREFIX.verify}:${dto.phone_main}`);
 
     if (!storedCode || storedCode !== dto.code) {
       throw new BadRequestException({
@@ -191,7 +191,7 @@ export class AuthService {
     }
 
     await this.usersService.markPhoneVerified(dto.phone_main);
-    await this.redisService.del(`${this.REDIS_PREFIX.VERIFY}:${dto.phone_main}`);
+    await this.redisService.del(`${this.REDIS_PREFIX.verify}:${dto.phone_main}`);
 
     return { message: 'Phone number verified successfully' };
   }
@@ -387,7 +387,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const redisKey = `${this.REDIS_PREFIX.RESET}:${dto.phone_main}`;
+    const redisKey = `${this.REDIS_PREFIX.reset}:${dto.phone_main}`;
     const code: string | null = await this.redisService.get(redisKey);
 
     if (!code || code !== dto.code) {
