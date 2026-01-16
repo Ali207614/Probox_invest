@@ -405,12 +405,42 @@ export class AuthController {
     return this.authService.forgotPassword(dto);
   }
 
+  @Post('verify-reset-code')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Verify reset code',
+    description:
+      'Verifies the 6-digit code sent for password reset. If valid, returns a temporary reset token. This token must be included in the reset-password request.',
+  })
+  @ApiBody({
+    type: VerifyDto,
+    description: 'Phone number and reset code',
+  })
+  @ApiOkResponse({
+    description: 'Code verified successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        reset_token: {
+          type: 'string',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid or expired code',
+  })
+  verifyResetCode(@Body() dto: VerifyDto): Promise<{ reset_token: string }> {
+    return this.authService.verifyResetCode(dto);
+  }
+
   @Post('reset-password')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Reset password using reset code',
+    summary: 'Reset password using reset token',
     description:
-      'Resets the user password using the verification code received from the forgot-password endpoint. Requires the phone number, valid reset code, and matching new passwords (4-20 characters).',
+      'Resets the user password using a valid reset token obtained from verify-reset-code. Requires the phone number, reset token, and matching new passwords.',
   })
   @ApiBody({
     type: ResetPasswordDto,
@@ -420,7 +450,7 @@ export class AuthController {
         summary: 'Reset password example',
         value: {
           phone_main: '+998901234567',
-          code: '789034',
+          reset_token: '550e8400-e29b-41d4-a716-446655440000',
           new_password: 'newSecurePass123',
           confirm_new_password: 'newSecurePass123',
         },
@@ -433,14 +463,14 @@ export class AuthController {
     example: { message: 'Password reset successful' },
   })
   @ApiBadRequestResponse({
-    description: 'Invalid code, expired code, or validation error',
+    description: 'Invalid token, password mismatch, or validation error',
     examples: {
-      invalidCode: {
-        summary: 'Invalid reset code',
+      invalidToken: {
+        summary: 'Invalid reset token',
         value: {
-          statusCode: 400,
-          message: 'Invalid reset code',
-          error: 'Bad Request',
+          statusCode: 403,
+          message: 'Invalid or expired reset session',
+          error: 'Forbidden',
         },
       },
       expiredCode: {

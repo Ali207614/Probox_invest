@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as crypto from 'crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -196,6 +197,28 @@ export class AuthService {
     return { message: 'Phone number verified successfully' };
   }
 
+  async verifyResetCode(dto: VerifyDto): Promise<{ reset_token: string }> {
+    const redisKey = `${this.REDIS_PREFIX.reset}:${dto.phone_main}`;
+    const storedCode = await this.redisService.get(redisKey);
+
+    if (!storedCode || storedCode !== dto.code) {
+      throw new BadRequestException({
+        message: 'Invalid or expired code',
+        location: 'invalid_code',
+      });
+    }
+
+    // Bir martalik xavfsiz kodni generatsiya qilish
+    const resetToken = crypto.randomUUID();
+    // Kodni redisga saqlash (10 minut)
+    await this.redisService.set(`reset_token:${resetToken}`, dto.phone_main, 600);
+
+    // SMS kodini redisdan o'chirish
+    await this.redisService.del(redisKey);
+
+    return { reset_token: resetToken };
+  }
+
   async completeRegistration(dto: RegisterDto): Promise<{ access_token: string }> {
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
@@ -387,13 +410,21 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const redisKey = `${this.REDIS_PREFIX.reset}:${dto.phone_main}`;
-    const code: string | null = await this.redisService.get(redisKey);
+    const user = await this.usersService.findByPhoneNumber(dto.phone_main);
 
-    if (!code || code !== dto.code) {
-      throw new BadRequestException({
-        message: 'Invalid or expired code',
-        location: 'invalid_code',
+    if (!user || user.phone_verified === false) {
+      throw new NotFoundException({
+        message: 'User not found or phone not verified',
+        location: 'user_not_found',
+      });
+    }
+
+    const storedPhone = await this.redisService.get(`reset_token:${dto.reset_token}`);
+
+    if (!storedPhone || storedPhone !== dto.phone_main) {
+      throw new ForbiddenException({
+        message: 'Invalid or expired reset session',
+        location: 'invalid_token',
       });
     }
 
@@ -405,11 +436,13 @@ export class AuthService {
     }
 
     const hashed: string = await bcrypt.hash(dto.new_password, 10);
+
     await this.knex<IUser>('users')
       .where({ phone_main: dto.phone_main })
       .update({ password: hashed, updated_at: new Date().toISOString() });
 
-    await this.redisService.del(redisKey);
+    // Reset tokenni redisdan o'chirish
+    await this.redisService.del(`reset_token:${dto.reset_token}`);
 
     return { message: '✅ Password reset successfully' };
   }
