@@ -39,7 +39,7 @@ export class UploadService {
   constructor(private config: ConfigService) {
     const endpoint = this.config.get<string>('MINIO_ENDPOINT')!;
     const port = this.config.get<string>('MINIO_PORT')!;
-    const useSsl = this.config.get<boolean>('MINIO_USE_SSL', false);
+    const useSsl = this.config.get<string>('MINIO_USE_SSL', 'false') === 'true';
     const protocol = useSsl ? 'https' : 'http';
 
     this.bucket = this.config.get<string>('MINIO_BUCKET')!;

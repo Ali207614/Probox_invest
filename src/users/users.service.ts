@@ -121,7 +121,6 @@ export class UsersService {
       .insert({
         sap_card_code: cardCode,
         profile_picture: JSON.stringify(keys),
-        created_by: user.id,
         created_at: now,
         updated_at: now,
       })
