@@ -84,7 +84,7 @@ export class AuthService {
 
     const data_to_send = {
       recipient: Number(fixed_phone),
-      message_id: message_id,
+      'message-id': message_id,
       sms: {
         originator: process.env.SMS_ORIGINATOR,
         content: {
@@ -97,8 +97,11 @@ export class AuthService {
       password: process.env.SMS_PASSWORD || '',
     };
 
+    console.log(data_to_send);
+    console.log(sms_creadentials);
+
     if (process.env.NODE_ENV !== 'development' && process.env.SMS_API_URL) {
-      const res = await axios.post(
+      await axios.post(
         process.env.SMS_API_URL,
         {
           messages: data_to_send,
@@ -107,8 +110,6 @@ export class AuthService {
           auth: sms_creadentials,
         },
       );
-
-      this.logger.log(`SMS sent to ${phone} and got this response: ${JSON.stringify(res)}`);
     }
 
     // Set rate limit only after successful sending (or skipping in dev)
