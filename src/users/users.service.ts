@@ -118,14 +118,8 @@ export class UsersService {
     const now = new Date();
 
     await this.knex(this.table)
-      .insert({
-        sap_card_code: cardCode,
-        profile_picture: JSON.stringify(keys),
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict('sap_card_code')
-      .merge({
+      .where({ sap_card_code: cardCode })
+      .update({
         profile_picture: JSON.stringify(keys),
         updated_at: now,
       });
