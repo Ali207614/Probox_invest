@@ -12,7 +12,7 @@ export interface IUser {
   sap_phone_number?: string | null;
   phone_verified: boolean;
   password?: string | null;
-  profile_picture: string | null;
+  profile_picture_urls: ImageUrls | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
   is_active: boolean;
   language: string;
@@ -21,9 +21,7 @@ export interface IUser {
   updated_at: string | null;
 }
 
-export type GetMeResponse = Omit<IUser, 'password'> & {
-  profile_picture_urls: ImageUrls | null;
-};
+export type GetMeResponse = Omit<IUser, 'password'>;
 
 export interface UpdateUserResponse {
   message: string;

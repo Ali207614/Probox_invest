@@ -18,6 +18,10 @@ type BpProfileRow = {
   profile_picture: string | null;
 };
 
+type UserDbRow = Omit<IUser, 'profile_picture_urls'> & {
+  profile_picture: string | null;
+};
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -29,7 +33,7 @@ export class UsersService {
   private readonly table = 'users';
 
   async getMe(user: UserPayload): Promise<GetMeResponse> {
-    const row: IUser | undefined = await this.knex<IUser>(this.table)
+    const row = await this.knex<UserDbRow>(this.table)
       .select([
         'id',
         'first_name',
@@ -57,13 +61,15 @@ export class UsersService {
       });
     }
 
-    const keys: ImageUrls | null = parseProfilePicture(row.profile_picture ?? null);
+    const keys: ImageUrls | null = parseProfilePicture(
+      (row as IUser & { profile_picture: string | null }).profile_picture ?? null,
+    );
 
     const profile_picture_urls: ImageUrls | null = keys
       ? await this.uploadService.generateSignedUrls(keys, 3600)
       : null;
 
-    const { password, ...safe } = row;
+    const { password, profile_picture, ...safe } = row as IUser & { profile_picture: unknown };
 
     return {
       ...safe,
