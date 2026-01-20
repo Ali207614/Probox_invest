@@ -273,85 +273,61 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<{ access_token: string }> {
+    // 1. Check if it's a regular User (Prioritized for speed)
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
-    if (!user) {
-      throw new UnauthorizedException({
-        message: 'Invalid credentials',
-        location: 'invalid_login',
-      });
-    }
+    if (user) {
+      if (user.status === 'Pending') {
+        throw new ForbiddenException({
+          message: 'Registration incomplete. Please complete registration.',
+          location: 'incomplete_registration',
+        });
+      }
 
-    if (user.status === 'Pending') {
-      throw new ForbiddenException({
-        message: 'Registration incomplete. Please complete registration.',
-        location: 'incomplete_registration',
-      });
-    }
+      if (await bcrypt.compare(dto.password, user.password || '')) {
+        if (user.device_token !== dto.device_token) {
+          await this.knex('users')
+            .where({
+              id: user.id,
+            })
+            .update({ device_token: dto.device_token });
+        }
 
-    if (!(await bcrypt.compare(dto.password, user.password || ''))) {
-      throw new UnauthorizedException({
-        message: 'Invalid credentials',
-        location: 'invalid_login',
-      });
-    }
-
-    if (user.device_token !== dto.device_token) {
-      await this.knex('users')
-        .where({
+        const payload = {
           id: user.id,
-        })
-        .update({ device_token: dto.device_token });
+          phone_main: user.phone_main,
+          sap_card_code: user.sap_card_code,
+          roles: [Role.USER],
+        };
+        const token: string = this.jwtService.sign(payload);
+
+        await this.setUserSession(user.id, token);
+
+        return { access_token: token };
+      }
     }
 
-    const payload = {
-      id: user.id,
-      phone_main: user.phone_main,
-      sap_card_code: user.sap_card_code,
-      roles: [Role.USER],
-    };
-    const token: string = this.jwtService.sign(payload);
-
-    await this.setUserSession(user.id, token);
-
-    return { access_token: token };
-  }
-
-  async adminLogin(dto: LoginDto): Promise<{ access_token: string }> {
+    // 2. Check if it's an Admin
     const admin = await this.adminsService.findByPhoneNumber(dto.phone_main);
-
-    if (!admin) {
-      throw new UnauthorizedException({
-        message: 'Invalid credentials',
-        location: 'invalid_login',
-      });
+    if (admin && admin.status === 'Open' && admin.is_active) {
+      if (await bcrypt.compare(dto.password, admin.password || '')) {
+        const payload = {
+          id: admin.id as string,
+          phone_main: admin.phone_main,
+          sap_card_code: admin.sap_card_code,
+          roles: [Role.ADMIN],
+        };
+        const token: string = this.jwtService.sign(payload);
+        await this.setUserSession(admin.id as string, token);
+        return { access_token: token };
+      }
     }
 
-    if (admin.status !== 'Open' || !admin.is_active) {
-      throw new ForbiddenException({
-        message: 'Your account is suspended or not active. Please contact support.',
-        location: 'account_inactive',
-      });
-    }
-
-    if (!(await bcrypt.compare(dto.password, admin.password || ''))) {
-      throw new UnauthorizedException({
-        message: 'Invalid credentials',
-        location: 'invalid_login',
-      });
-    }
-
-    const payload = {
-      id: admin.id as string,
-      phone_main: admin.phone_main,
-      sap_card_code: admin.sap_card_code,
-      roles: [Role.ADMIN],
-    };
-    const token: string = this.jwtService.sign(payload);
-
-    await this.setUserSession(admin.id as string, token);
-
-    return { access_token: token };
+    // 3. If neither matches
+    throw new UnauthorizedException({
+      message: 'Invalid credentials',
+      location: 'invalid_login',
+    });
   }
 
   async logout(userId: string, token: string): Promise<{ message: string }> {

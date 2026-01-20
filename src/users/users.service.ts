@@ -1,13 +1,7 @@
-import { UpdateMeDto } from './dto/update-me.dto';
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
 import { InjectKnex } from 'nestjs-knex';
-import { GetMeResponse, IUser, UpdateUserResponse } from '../common/interfaces/user.interface';
+import { GetMeResponse, IUser } from '../common/interfaces/user.interface';
 import { UserPayload } from '../common/interfaces/user-payload.interface';
 import { ImageUrls, UploadService } from '../upload/upload.service';
 import { RedisService } from '../common/redis/redis.service';
@@ -31,6 +25,17 @@ export class UsersService {
   ) {}
 
   private readonly table = 'users';
+
+  private splitName(fullName: string | null | undefined): {
+    first_name: string;
+    last_name: string;
+  } {
+    if (!fullName) return { first_name: '', last_name: '' };
+    const parts = fullName.trim().split(/\s+/);
+    const first_name = parts[0] || '';
+    const last_name = parts.slice(1).join(' ') || '';
+    return { first_name, last_name };
+  }
 
   async getMe(user: UserPayload): Promise<GetMeResponse> {
     const row = await this.knex<UserDbRow>(this.table)
@@ -71,6 +76,13 @@ export class UsersService {
 
     const { password, profile_picture, ...safe } = row as IUser & { profile_picture: unknown };
 
+    // Auto-fill names if null
+    if (!safe.first_name || !safe.last_name) {
+      const { first_name, last_name } = this.splitName(safe.sap_card_name);
+      if (!safe.first_name) safe.first_name = first_name;
+      if (!safe.last_name) safe.last_name = last_name;
+    }
+
     return {
       ...safe,
       profile_picture_urls,
@@ -84,8 +96,12 @@ export class UsersService {
     sap_card_code?: string;
     sap_name?: string;
   }): Promise<IUser> {
+    const { first_name, last_name } = this.splitName(data.sap_name);
+
     const user: IUser[] = await this.knex<IUser>(this.table)
       .insert({
+        first_name,
+        last_name,
         phone_main: data.phone_main,
         phone_verified: data.phone_verified,
         status: data.status,
@@ -188,70 +204,5 @@ export class UsersService {
     }
 
     await this.knex<IUser>(this.table).where({ phone_main: phone }).update(updateData);
-  }
-
-  // ===========================================================================================
-
-  async update(userId: string, data: UpdateMeDto): Promise<UpdateUserResponse> {
-    const user = await this.knex<IUser>(this.table).where({ id: userId }).first();
-
-    if (!user) {
-      throw new NotFoundException({
-        message: 'User not found',
-        location: 'user_not_found',
-      });
-    }
-
-    const updateData: Partial<IUser> = {
-      updated_at: new Date().toISOString(),
-    };
-
-    if (data.first_name) updateData.first_name = data.first_name;
-    if (data.last_name) updateData.last_name = data.last_name;
-    if (data.language) updateData.language = data.language;
-    if (data.is_active !== undefined) updateData.is_active = data.is_active;
-
-    // Main Phone Update
-    if (data.phone_main && data.phone_main !== user.phone_main) {
-      if (!data.verification_code) {
-        throw new BadRequestException({
-          message: 'Verification code is required to change phone number',
-          location: 'verification_code',
-        });
-      }
-
-      const storedCode = await this.redisService.get(`verify:${data.phone_main}`);
-      if (!storedCode || storedCode !== data.verification_code) {
-        throw new BadRequestException({
-          message: 'Invalid verification code',
-          location: 'verification_code',
-        });
-      }
-
-      // Telefon raqam mavjudligini tekshirish
-      const existing = await this.knex<IUser>(this.table)
-        .where({ phone_main: data.phone_main })
-        .whereNot({ id: userId })
-        .first();
-
-      if (existing) {
-        throw new ConflictException({
-          message: 'Phone number already in use',
-          location: 'phone_main',
-        });
-      }
-
-      updateData.phone_main = data.phone_main;
-      updateData.phone_verified = true; // Assuming successful verification proves ownership
-      await this.redisService.del(`verify:${data.phone_main}`);
-    }
-
-    // Secondary Phone Update
-    if (data.phone_secondary && data.phone_secondary !== user.phone_secondary)
-      updateData.phone_secondary = data.phone_secondary;
-
-    await this.knex<IUser>(this.table).where({ id: userId }).update(updateData);
-
-    return { message: 'Profile updated successfully' };
   }
 }

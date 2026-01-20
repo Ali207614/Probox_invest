@@ -10,7 +10,6 @@ import {
   Post,
   Delete,
   Body,
-  Patch,
   HttpCode,
 } from '@nestjs/common';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
@@ -35,8 +34,7 @@ import { PaginationResult } from '../common/utils/pagination.util';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
-import { GetMeResponse, UpdateUserResponse } from '../common/interfaces/user.interface';
-import { UpdateMeDto } from './dto/update-me.dto';
+import { GetMeResponse } from '../common/interfaces/user.interface';
 import { InvestorTransactionsQueryDto } from './dto/investor-transactions-query.dto';
 import { InvestorTransactionsFilterDto } from './dto/investor-transactions-filter.dto';
 
@@ -68,12 +66,9 @@ export class UsersController {
         last_name: { type: 'string', example: 'Doe' },
         phone_main: { type: 'string', example: '+998901234567' },
         phone_secondary: { type: 'string', nullable: true, example: '+998901234568' },
-        username: { type: 'string', nullable: true, example: 'johndoe' },
         sap_card_code: { type: 'string', nullable: true, example: 'C00001' },
         sap_card_name: { type: 'string', nullable: true, example: 'John Doe' },
-        sap_phone_number: { type: 'string', nullable: true, example: '+998901234567' },
         phone_verified: { type: 'boolean', example: true },
-        profile_picture: { type: 'string', nullable: true, example: 'profiles/uuid/image.webp' },
         profile_picture_urls: {
           type: 'object',
           nullable: true,
@@ -335,31 +330,5 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
   ): Promise<{ message: string }> {
     return this.usersService.deleteProfilePicture(req.user, cardCode);
-  }
-
-  @Patch('me')
-  @ApiOperation({
-    summary: 'Update current user profile',
-    description:
-      "Updates the authenticated user's profile. If phone_main is changed, verification_code is required.",
-  })
-  @ApiBody({ type: UpdateMeDto })
-  @ApiResponse({
-    status: 200,
-    description: 'User profile updated successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string', example: 'User updated successfully' },
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'Validation error or invalid verification code' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async update(
-    @Req() req: AuthenticatedRequest,
-    @Body() updateMeDto: UpdateMeDto,
-  ): Promise<UpdateUserResponse> {
-    return this.usersService.update(req.user.id, updateMeDto);
   }
 }

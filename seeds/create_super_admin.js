@@ -11,13 +11,13 @@ exports.seed = async function (knex) {
     const hashedPassword = await bcrypt.hash('admin123', 10);
 
     // Check if admin already exists
-    const existingAdmin = await knex('admins').where({ phone_main: '+998001112233' }).first();
+    const existingAdmin = await knex('admins').where({ phone_main: '+998990123456' }).first();
 
     if (!existingAdmin) {
         await knex('admins').insert({
             first_name: 'Super',
             last_name: 'Admin',
-            phone_main: '+998001112233',
+            phone_main: '+998990123456',
             phone_verified: true,
             password: hashedPassword,
             is_protected: true,

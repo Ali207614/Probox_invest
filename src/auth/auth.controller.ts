@@ -224,19 +224,27 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Login and receive access token',
+    summary: 'Login and receive access token (User/Admin)',
     description:
-      'Authenticates a user with phone number and password. Returns a JWT access token valid for authenticated requests. The device token is used for push notification registration.',
+      'Authenticates a user or admin with phone number and password. Returns a JWT access token valid for authenticated requests. The system automatically detects user type based on credentials.',
   })
   @ApiBody({
     type: LoginDto,
     description: 'Login credentials',
     examples: {
-      example: {
-        summary: 'Login example',
+      user: {
+        summary: 'User login example',
         value: {
           phone_main: '+998901234567',
           password: 'securePass123',
+          device_token: 'fcm_device_token_here_abc123xyz',
+        },
+      },
+      admin: {
+        summary: 'Admin login example',
+        value: {
+          phone_main: '+998901234568',
+          password: 'adminSecurePass123',
           device_token: 'fcm_device_token_here_abc123xyz',
         },
       },
@@ -276,76 +284,6 @@ export class AuthController {
   })
   login(@Body() dto: LoginDto): Promise<{ access_token: string }> {
     return this.authService.login(dto);
-  }
-
-  @Post('admin/login')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Admin login and receive access token',
-    description:
-      'Authenticates an admin user with phone number and password. Only users with admin privileges can successfully authenticate through this endpoint. Returns a JWT access token for admin operations.',
-  })
-  @ApiBody({
-    type: LoginDto,
-    description: 'Admin login credentials',
-    examples: {
-      example: {
-        summary: 'Admin login example',
-        value: {
-          phone_main: '+998901234567',
-          password: 'adminSecurePass123',
-          device_token: 'fcm_device_token_here_abc123xyz',
-        },
-      },
-    },
-  })
-  @ApiOkResponse({
-    type: TokenResponseDto,
-    description: 'Admin login successful',
-    example: {
-      access_token:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
-    },
-  })
-  @ApiBadRequestResponse({
-    description: 'Invalid request format',
-    example: {
-      statusCode: 400,
-      message: ['Invalid phone number format', 'password must be a string'],
-      error: 'Bad Request',
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: 'Invalid credentials or insufficient permissions',
-    examples: {
-      invalidCredentials: {
-        summary: 'Invalid credentials',
-        value: {
-          statusCode: 401,
-          message: 'Invalid phone number or password',
-          error: 'Unauthorized',
-        },
-      },
-      notAdmin: {
-        summary: 'Not an admin',
-        value: {
-          statusCode: 401,
-          message: 'Access denied. Admin privileges required.',
-          error: 'Unauthorized',
-        },
-      },
-    },
-  })
-  @ApiNotFoundResponse({
-    description: 'Admin user not found',
-    example: {
-      statusCode: 404,
-      message: 'User not found',
-      error: 'Not Found',
-    },
-  })
-  adminLogin(@Body() dto: LoginDto): Promise<{ access_token: string }> {
-    return this.authService.adminLogin(dto);
   }
 
   @Post('forgot-password')
