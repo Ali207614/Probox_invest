@@ -125,8 +125,8 @@ export class AuthService {
     };
 
     if (process.env.NODE_ENV !== 'production') {
-      res.code = code;
     }
+    res.code = code;
 
     return res;
   }
