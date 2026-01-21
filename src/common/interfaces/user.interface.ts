@@ -15,13 +15,12 @@ export interface IUser {
   profile_picture_urls: ImageUrls | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
   is_active: boolean;
+  is_admin: boolean;
   language: string;
   device_token: string;
   created_at: string;
   updated_at: string | null;
 }
-
-export type GetMeResponse = Omit<IUser, 'password'>;
 
 export interface UpdateUserResponse {
   message: string;

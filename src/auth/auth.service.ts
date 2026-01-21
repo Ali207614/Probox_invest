@@ -29,7 +29,6 @@ import { SapService } from '../sap/hana/sap-hana.service';
 import { SendCode, SendCodeResponse } from '../common/types/send-code.type';
 import { normalizeUzPhone } from '../common/utils/uz-phone.util';
 import { AdminsService } from '../admins/admins.service';
-import { Role } from '../common/enums/role.enum';
 import { LoggerService } from 'src/common/logger/logger.service';
 
 @Injectable()
@@ -155,12 +154,15 @@ export class AuthService {
 
       const sapPartner = sapPartners[0];
 
+      console.table(sapPartner);
+
       await this.usersService.createUser({
         phone_main: phone,
         phone_verified: false,
         status: 'Pending',
         sap_card_code: sapPartner.CardCode,
         sap_name: sapPartner.CardName,
+        is_admin: sapPartner.U_admin === 'yes',
       });
     }
 
@@ -263,7 +265,6 @@ export class AuthService {
       id: user.id,
       phone_main: user.phone_main,
       sap_card_code: user.sap_card_code,
-      roles: [Role.USER],
     };
     const token: string = this.jwtService.sign(payload);
 
@@ -273,7 +274,6 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<{ access_token: string }> {
-    // 1. Check if it's a regular User (Prioritized for speed)
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
     if (user) {
@@ -297,7 +297,6 @@ export class AuthService {
           id: user.id,
           phone_main: user.phone_main,
           sap_card_code: user.sap_card_code,
-          roles: [Role.USER],
         };
         const token: string = this.jwtService.sign(payload);
 
@@ -307,23 +306,6 @@ export class AuthService {
       }
     }
 
-    // 2. Check if it's an Admin
-    const admin = await this.adminsService.findByPhoneNumber(dto.phone_main);
-    if (admin && admin.status === 'Open' && admin.is_active) {
-      if (await bcrypt.compare(dto.password, admin.password || '')) {
-        const payload = {
-          id: admin.id as string,
-          phone_main: admin.phone_main,
-          sap_card_code: admin.sap_card_code,
-          roles: [Role.ADMIN],
-        };
-        const token: string = this.jwtService.sign(payload);
-        await this.setUserSession(admin.id as string, token);
-        return { access_token: token };
-      }
-    }
-
-    // 3. If neither matches
     throw new UnauthorizedException({
       message: 'Invalid credentials',
       location: 'invalid_login',

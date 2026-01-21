@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
 import { InjectKnex } from 'nestjs-knex';
-import { GetMeResponse, IUser } from '../common/interfaces/user.interface';
+import { IUser } from '../common/interfaces/user.interface';
 import { UserPayload } from '../common/interfaces/user-payload.interface';
 import { ImageUrls, UploadService } from '../upload/upload.service';
 import { parseProfilePicture } from '../common/utils/parse-profile-picture.util';
@@ -36,7 +36,7 @@ export class UsersService {
     return { first_name, last_name };
   }
 
-  async getMe(user: UserPayload): Promise<GetMeResponse> {
+  async getMe(user: UserPayload): Promise<IUser> {
     const row = await this.knex<UserDbRow>(this.table)
       .select([
         'id',
@@ -51,6 +51,7 @@ export class UsersService {
         'profile_picture',
         'created_at',
         'updated_at',
+        'is_admin',
         'device_token',
         'is_active',
         'language',
@@ -93,6 +94,7 @@ export class UsersService {
     status: 'Pending';
     sap_card_code?: string;
     sap_name?: string;
+    is_admin: boolean;
   }): Promise<IUser> {
     const { first_name, last_name } = this.splitName(data.sap_name);
 
@@ -106,6 +108,7 @@ export class UsersService {
         sap_card_code: data.sap_card_code,
         sap_card_name: data.sap_name,
         sap_phone_number: data.phone_main,
+        is_admin: data.is_admin,
       })
       .returning('*');
 

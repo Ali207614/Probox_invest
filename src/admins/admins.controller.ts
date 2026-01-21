@@ -1,9 +1,8 @@
 import { Controller, Get, UseGuards, Query, Param, UseInterceptors, Body } from '@nestjs/common';
 import { AdminsService } from './admins.service';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/enums/role.enum';
+import { AdminsAuthGuard } from '../common/guards/admins-auth.guard';
+import { IUser } from 'src/common/interfaces/user.interface';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,7 +16,6 @@ import { PaginationResult } from '../common/utils/pagination.util';
 import type { Admin } from '../common/interfaces/admin.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { UserPayload } from '../common/interfaces/user-payload.interface';
-import type { GetMeResponse } from '../common/interfaces/user.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
 import {
   IBpMonthlyIncomeSummary,
@@ -43,7 +41,7 @@ import {
 @ApiTags('Admins')
 @ApiBearerAuth()
 @Controller('admins')
-@UseGuards(JwtUserAuthGuard, RolesGuard)
+@UseGuards(JwtUserAuthGuard, AdminsAuthGuard)
 @ApiExtraModels(InvestorMetricItemTotalOnlyDto, InvestorMetricItemMonthlyDto)
 export class AdminsController {
   constructor(
@@ -54,7 +52,6 @@ export class AdminsController {
   // ==================== Admin Management ====================
 
   @Get('/admins')
-  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Get all admins (Super Admin only)',
     description:
@@ -97,7 +94,6 @@ export class AdminsController {
   // ==================== User Management ====================
 
   @Get('users')
-  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Get all users (Admin only)',
     description:
@@ -116,12 +112,11 @@ export class AdminsController {
     status: 403,
     description: 'Forbidden - Admin role required',
   })
-  async getUsers(): Promise<GetMeResponse[]> {
+  async getUsers(): Promise<IUser[]> {
     return this.adminsService.getUsers();
   }
 
   @Get('users/:id')
-  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Get user full details (Admin only)',
     description:
@@ -150,12 +145,11 @@ export class AdminsController {
     status: 404,
     description: 'User not found',
   })
-  async getUserDetail(@Param('id') id: string): Promise<GetMeResponse> {
+  async getUserDetail(@Param('id') id: string): Promise<IUser> {
     return this.adminsService.getUserDetails(id);
   }
 
   @Get('users/:id/income-summary')
-  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Get user income summary (Admin only)',
     description:
@@ -190,7 +184,6 @@ export class AdminsController {
   }
 
   @Get('users/:id/investor-summary')
-  @Roles(Role.ADMIN)
   @ApiOperation({
     summary: 'Get user investor summary (Admin only)',
     description:
@@ -228,7 +221,6 @@ export class AdminsController {
   }
 
   @Get('users/:id/investor-transactions')
-  @Roles(Role.ADMIN)
   @UseInterceptors(PaginationInterceptor)
   @ApiOperation({
     summary: 'Get user investor transactions (Admin only)',

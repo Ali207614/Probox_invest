@@ -24,6 +24,7 @@ exports.up = async function (knex) {
     table.enu('status', ['Pending', 'Open', 'Deleted', 'Banned']).defaultTo('Open');
     table.text('profile_picture', 255).nullable()
     table.string('device_token');
+    table.boolean('is_admin').defaultTo(false);
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
 

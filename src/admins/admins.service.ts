@@ -3,7 +3,7 @@ import { Knex } from 'knex';
 import { InjectKnex } from 'nestjs-knex';
 import { Admin } from '../common/interfaces/admin.interface';
 import { PaginationResult } from '../common/utils/pagination.util';
-import { IUser, GetMeResponse } from 'src/common/interfaces/user.interface';
+import { IUser } from 'src/common/interfaces/user.interface';
 import { ImageUrls, UploadService } from '../upload/upload.service';
 import { parseProfilePicture } from '../common/utils/parse-profile-picture.util';
 
@@ -72,7 +72,7 @@ export class AdminsService {
     return admin;
   }
 
-  async getUsers(): Promise<GetMeResponse[]> {
+  async getUsers(): Promise<IUser[]> {
     const users = (await this.knex('users')
       .select([
         'id',
@@ -102,8 +102,9 @@ export class AdminsService {
 
         const { password, profile_picture, ...safe } = row;
         return {
-          ...(safe as GetMeResponse),
+          ...safe,
           profile_picture_urls,
+          role: 'user' as const,
         };
       }),
     );
@@ -111,7 +112,7 @@ export class AdminsService {
     return result;
   }
 
-  async getUserDetails(id: string): Promise<GetMeResponse> {
+  async getUserDetails(id: string): Promise<IUser> {
     const row = (await this.knex('users')
       .select([
         'id',
@@ -149,7 +150,7 @@ export class AdminsService {
     const { password, profile_picture, ...safe } = row;
 
     return {
-      ...(safe as GetMeResponse),
+      ...safe,
       profile_picture_urls,
     };
   }

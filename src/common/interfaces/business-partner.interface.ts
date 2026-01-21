@@ -4,6 +4,7 @@ export interface IBusinessPartner {
   CardType: string;
   Phone1?: string | null;
   Phone2?: string | null;
+  U_admin: string;
 }
 
 export interface IBpMonthlyIncomeSummary {

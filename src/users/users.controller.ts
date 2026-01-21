@@ -34,7 +34,7 @@ import { PaginationResult } from '../common/utils/pagination.util';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
-import { GetMeResponse } from '../common/interfaces/user.interface';
+import { IUser } from '../common/interfaces/user.interface';
 import { InvestorTransactionsQueryDto } from './dto/investor-transactions-query.dto';
 import { InvestorTransactionsFilterDto } from './dto/investor-transactions-filter.dto';
 
@@ -89,11 +89,17 @@ export class UsersController {
           nullable: true,
           example: '2024-01-16T12:00:00Z',
         },
+        role: {
+          type: 'string',
+          enum: ['user', 'admin'],
+          example: 'user',
+          description: 'User role - either "user" or "admin"',
+        },
       },
     },
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getMe(@Req() req: AuthenticatedRequest): Promise<GetMeResponse> {
+  async getMe(@Req() req: AuthenticatedRequest): Promise<IUser> {
     return this.usersService.getMe(req.user);
   }
 
