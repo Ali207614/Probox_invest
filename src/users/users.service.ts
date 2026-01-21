@@ -4,7 +4,6 @@ import { InjectKnex } from 'nestjs-knex';
 import { GetMeResponse, IUser } from '../common/interfaces/user.interface';
 import { UserPayload } from '../common/interfaces/user-payload.interface';
 import { ImageUrls, UploadService } from '../upload/upload.service';
-import { RedisService } from '../common/redis/redis.service';
 import { parseProfilePicture } from '../common/utils/parse-profile-picture.util';
 
 type BpProfileRow = {
@@ -12,8 +11,9 @@ type BpProfileRow = {
   profile_picture: string | null;
 };
 
-type UserDbRow = Omit<IUser, 'profile_picture_urls'> & {
+type UserDbRow = Omit<IUser, 'profile_picture_urls' | 'profile_picture' | 'password'> & {
   profile_picture: string | null;
+  password?: string | null;
 };
 
 @Injectable()
@@ -21,7 +21,6 @@ export class UsersService {
   constructor(
     @InjectKnex() private readonly knex: Knex,
     private readonly uploadService: UploadService,
-    private readonly redisService: RedisService,
   ) {}
 
   private readonly table = 'users';
@@ -67,16 +66,15 @@ export class UsersService {
     }
 
     const keys: ImageUrls | null = parseProfilePicture(
-      (row as IUser & { profile_picture: string | null }).profile_picture ?? null,
+      (row as { profile_picture: string | null }).profile_picture,
     );
 
     const profile_picture_urls: ImageUrls | null = keys
       ? await this.uploadService.generateSignedUrls(keys, 3600)
       : null;
 
-    const { password, profile_picture, ...safe } = row as IUser & { profile_picture: unknown };
+    const { password, profile_picture, ...safe } = row as UserDbRow;
 
-    // Auto-fill names if null
     if (!safe.first_name || !safe.last_name) {
       const { first_name, last_name } = this.splitName(safe.sap_card_name);
       if (!safe.first_name) safe.first_name = first_name;
