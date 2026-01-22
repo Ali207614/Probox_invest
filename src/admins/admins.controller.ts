@@ -13,9 +13,9 @@ import {
   ApiExtraModels,
 } from '@nestjs/swagger';
 import { PaginationResult } from '../common/utils/pagination.util';
-import type { Admin } from '../common/interfaces/admin.interface';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { UserPayload } from '../common/interfaces/user-payload.interface';
+// import type { Admin } from '../common/interfaces/admin.interface';
+// import { CurrentUser } from '../common/decorators/current-user.decorator';
+// import type { UserPayload } from '../common/interfaces/user-payload.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
 import {
   IBpMonthlyIncomeSummary,
@@ -28,8 +28,8 @@ import { PaginationInterceptor } from '../common/interceptors/pagination.interce
 
 // Import DTOs for Swagger documentation
 import {
-  GetAdminsQueryDto,
-  PaginatedAdminsResponseDto,
+  // GetAdminsQueryDto,
+  // PaginatedAdminsResponseDto,
   UserDetailResponseDto,
   IncomeSummaryResponseDto,
   InvestorSummaryResponseDto,
@@ -51,45 +51,45 @@ export class AdminsController {
 
   // ==================== Admin Management ====================
 
-  @Get('/admins')
-  @ApiOperation({
-    summary: 'Get all admins (Super Admin only)',
-    description:
-      'Retrieves a paginated list of all admin accounts. Only super admins (is_protected=true) can access this endpoint.',
-  })
-  @ApiQuery({
-    name: 'offset',
-    required: false,
-    type: Number,
-    description: 'Number of records to skip (default: 0)',
-    example: 0,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Maximum number of records to return (default: 10)',
-    example: 10,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of admins retrieved successfully',
-    type: PaginatedAdminsResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing token',
-  })
-  @ApiResponse({
-    status: 403,
-    description: "Forbidden - You don't have rights to perform this action",
-  })
-  async getAdmins(
-    @Query() query: GetAdminsQueryDto,
-    @CurrentUser() user: UserPayload,
-  ): Promise<PaginationResult<Admin>> {
-    return this.adminsService.getAdmins(user.id, query.offset ?? 0, query.limit ?? 10);
-  }
+  // @Get('/admins')
+  // @ApiOperation({
+  //   summary: 'Get all admins (Super Admin only)',
+  //   description:
+  //     'Retrieves a paginated list of all admin accounts. Only super admins (is_protected=true) can access this endpoint.',
+  // })
+  // @ApiQuery({
+  //   name: 'offset',
+  //   required: false,
+  //   type: Number,
+  //   description: 'Number of records to skip (default: 0)',
+  //   example: 0,
+  // })
+  // @ApiQuery({
+  //   name: 'limit',
+  //   required: false,
+  //   type: Number,
+  //   description: 'Maximum number of records to return (default: 10)',
+  //   example: 10,
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'List of admins retrieved successfully',
+  //   type: PaginatedAdminsResponseDto,
+  // })
+  // @ApiResponse({
+  //   status: 401,
+  //   description: 'Unauthorized - Invalid or missing token',
+  // })
+  // @ApiResponse({
+  //   status: 403,
+  //   description: "Forbidden - You don't have rights to perform this action",
+  // })
+  // async getAdmins(
+  //   @Query() query: GetAdminsQueryDto,
+  //   @CurrentUser() user: UserPayload,
+  // ): Promise<PaginationResult<Admin>> {
+  //   return this.adminsService.getAdmins(user.id, query.offset ?? 0, query.limit ?? 10);
+  // }
 
   // ==================== User Management ====================
 
