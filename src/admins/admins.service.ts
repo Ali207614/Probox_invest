@@ -72,7 +72,7 @@ export class AdminsService {
     return admin;
   }
 
-  async getUsers(): Promise<IUser[]> {
+  async getUsers(): Promise<PaginationResult<IUser>> {
     const users = (await this.knex('users')
       .select([
         'id',
@@ -94,6 +94,10 @@ export class AdminsService {
       .where('is_admin', false)
       .orderBy('created_at', 'desc')) as (IUser & { profile_picture: string | null })[];
 
+    const [{ total }] = await this.knex<IUser>('users')
+      .where('is_admin', false)
+      .count({ total: '*' });
+
     const result = await Promise.all(
       users.map(async (row) => {
         const keys: ImageUrls | null = parseProfilePicture(row.profile_picture ?? null);
@@ -110,7 +114,12 @@ export class AdminsService {
       }),
     );
 
-    return result;
+    return {
+      rows: result,
+      total: Number(total),
+      limit: result.length,
+      offset: 0,
+    };
   }
 
   async getUserDetails(id: string): Promise<IUser> {

@@ -67,14 +67,21 @@ export class SapService {
         params,
       );
 
+      const balance = (parseNumericString(rows[0].balance) as number) ?? 0;
+      const income_this_month = (parseNumericString(rows[0].income_this_month) as number) ?? 0;
+      const income_last_month = (parseNumericString(rows[0].income_last_month) as number) ?? 0;
+      const income_growth_percent =
+        rows[0].income_growth_percent == null
+          ? null
+          : balance === 0
+            ? 0
+            : Math.round((income_last_month / balance) * 100 * 100) / 100;
+
       return {
-        balance: (parseNumericString(rows[0].balance) as number) ?? 0,
-        income_this_month: (parseNumericString(rows[0].income_this_month) as number) ?? 0,
-        income_last_month: (parseNumericString(rows[0].income_last_month) as number) ?? 0,
-        income_growth_percent:
-          rows[0].income_growth_percent == null
-            ? null
-            : (parseNumericString(rows[0].income_growth_percent) as number),
+        balance: balance,
+        income_this_month: income_this_month,
+        income_last_month: income_last_month,
+        income_growth_percent: Number(income_growth_percent),
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

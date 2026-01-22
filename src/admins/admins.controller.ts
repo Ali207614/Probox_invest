@@ -112,7 +112,7 @@ export class AdminsController {
     status: 403,
     description: 'Forbidden - Admin role required',
   })
-  async getUsers(): Promise<IUser[]> {
+  async getUsers(): Promise<PaginationResult<IUser>> {
     return this.adminsService.getUsers();
   }
 
