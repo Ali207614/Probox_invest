@@ -91,6 +91,7 @@ export class AdminsService {
         'is_active',
         'language',
       ])
+      .where('is_admin', false)
       .orderBy('created_at', 'desc')) as (IUser & { profile_picture: string | null })[];
 
     const result = await Promise.all(
