@@ -24,7 +24,6 @@ import {
   ApiNotFoundResponse,
   ApiConflictResponse,
   ApiForbiddenResponse,
-  getSchemaPath,
 } from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -527,12 +526,11 @@ export class AuthController {
       'Generates a new access token using a valid refresh token. The refresh token must be provided in the Authorization header as a Bearer token.',
   })
   @ApiOkResponse({
+    type: AccessTokenResponseDto,
     description: 'Access token refreshed successfully',
-    schema: {
-      $ref: getSchemaPath(AccessTokenResponseDto),
-      example: {
-        access_token: '...',
-      },
+    example: {
+      access_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
     },
   })
   @ApiUnauthorizedResponse({
