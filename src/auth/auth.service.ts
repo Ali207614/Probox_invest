@@ -33,8 +33,6 @@ import { IUser } from '../common/interfaces/user.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
 import { SendCode, SendCodeResponse } from '../common/types/send-code.type';
 import { normalizeUzPhone } from '../common/utils/uz-phone.util';
-import { AdminsService } from '../admins/admins.service';
-import { LoggerService } from 'src/common/logger/logger.service';
 
 @Injectable()
 export class AuthService {
@@ -45,8 +43,6 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly sapService: SapService,
-    private readonly adminsService: AdminsService,
-    private readonly logger: LoggerService,
   ) {}
 
   private readonly REDIS_PREFIX = {
@@ -57,7 +53,6 @@ export class AuthService {
   };
 
   private readonly ACCESS_TOKEN_EXPIRES = '1d';
-  private readonly REFRESH_TOKEN_EXPIRES = '30d';
   private readonly REFRESH_TOKEN_EXPIRES_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
   private generateTokens(user: IUser): { access_token: string; refresh_token: string } {
@@ -392,9 +387,9 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const user = await this.usersService.findByPhoneNumber(dto.phone_main);
+    const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
-    if (!user || user.phone_verified === false) {
+    if (!user || user.phone_verified) {
       throw new NotFoundException({
         message: 'User not found or phone not verified',
         location: 'user_not_found',
