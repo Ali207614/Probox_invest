@@ -5,28 +5,9 @@ import { ApiProperty } from '@nestjs/swagger';
 export class InvestorTransactionItemDto {
   @ApiProperty({
     description: 'Transaction reference date',
-    example: '2026-01-15T10:00:00.000Z',
+    example: '2026-01-15',
   })
   ref_date: string;
-
-  @ApiProperty({
-    description: 'Internal transaction ID',
-    example: 12345,
-  })
-  trans_id: number;
-
-  @ApiProperty({
-    description: 'Transaction type code from SAP',
-    example: 30,
-  })
-  trans_type: number;
-
-  @ApiProperty({
-    description: 'Transaction description',
-    example: 'Monthly dividend payment',
-    nullable: true,
-  })
-  description: string | null;
 
   @ApiProperty({
     description: 'Transaction amount in UZS',
@@ -40,6 +21,24 @@ export class InvestorTransactionItemDto {
     example: 'dividend',
   })
   transaction_type: 'initial_capital' | 'additional_capital' | 'reinvest' | 'dividend' | 'other';
+
+  @ApiProperty({
+    description: 'Number of aggregated SAP ledger rows',
+    example: 1,
+  })
+  rows_count: number;
+
+  @ApiProperty({
+    description: 'Minimum internal transaction ID in this group',
+    example: 12345,
+  })
+  min_trans_id: number;
+
+  @ApiProperty({
+    description: 'Maximum internal transaction ID in this group',
+    example: 12345,
+  })
+  max_trans_id: number;
 }
 
 // ==================== Response DTO ====================

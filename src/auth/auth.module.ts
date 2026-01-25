@@ -6,8 +6,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RedisModule } from 'src/common/redis/redis.module';
 import { FeatureModule } from 'src/feature/feature.module';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
+import { JwtRefreshAuthGuard } from '../common/guards/jwt-refresh.guard';
 import { UsersModule } from '../users/users.module';
 import { JwtUserStrategy } from '../common/strategies/jwt-user.strategy';
+import { JwtRefreshStrategy } from '../common/strategies/jwt-refresh.strategy';
 import { SapModule } from '../sap/sap.module';
 import { AdminsModule } from '../admins/admins.module';
 import { LoggerModule } from 'src/common/logger/logger.module';
@@ -30,7 +32,13 @@ import { LoggerModule } from 'src/common/logger/logger.module';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, JwtUserStrategy, JwtUserAuthGuard],
+  providers: [
+    AuthService,
+    JwtUserStrategy,
+    JwtRefreshStrategy,
+    JwtUserAuthGuard,
+    JwtRefreshAuthGuard,
+  ],
   exports: [AuthService],
   controllers: [AuthController],
 })

@@ -12,6 +12,7 @@ export interface IUser {
   sap_phone_number?: string | null;
   phone_verified: boolean;
   password?: string | null;
+  pin_code?: string | null;
   profile_picture_urls: ImageUrls | null;
   status: 'Open' | 'Deleted' | 'Pending' | 'Banned';
   is_active: boolean;

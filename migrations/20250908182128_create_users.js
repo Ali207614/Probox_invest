@@ -11,6 +11,7 @@ exports.up = async function (knex) {
     table.boolean('phone_verified').defaultTo(false);
     table.string('verification_code');
     table.string('password');
+    table.string('pin_code').nullable();
     table.boolean('is_protected').defaultTo(false);
     table.string('sap_card_code').nullable().index().unique();
     table.string('sap_phone_number');

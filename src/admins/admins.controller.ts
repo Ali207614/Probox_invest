@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query, Param, UseInterceptors, Body } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, Param, UseInterceptors } from '@nestjs/common';
 import { AdminsService } from './admins.service';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { AdminsAuthGuard } from '../common/guards/admins-auth.guard';
@@ -13,23 +13,17 @@ import {
   ApiExtraModels,
 } from '@nestjs/swagger';
 import { PaginationResult } from '../common/utils/pagination.util';
-// import type { Admin } from '../common/interfaces/admin.interface';
-// import { CurrentUser } from '../common/decorators/current-user.decorator';
-// import type { UserPayload } from '../common/interfaces/user-payload.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
 import {
   IBpMonthlyIncomeSummary,
   InvestorTransaction,
 } from '../common/interfaces/business-partner.interface';
 import { InvestorMetricItem } from '../common/interfaces/invester-summary.interface';
-import { InvestorTransactionsQueryDto } from '../users/dto/investor-transactions-query.dto';
 import { InvestorTransactionsFilterDto } from '../users/dto/investor-transactions-filter.dto';
 import { PaginationInterceptor } from '../common/interceptors/pagination.interceptor';
 
 // Import DTOs for Swagger documentation
 import {
-  // GetAdminsQueryDto,
-  // PaginatedAdminsResponseDto,
   UserDetailResponseDto,
   IncomeSummaryResponseDto,
   InvestorSummaryResponseDto,
@@ -48,48 +42,6 @@ export class AdminsController {
     private readonly adminsService: AdminsService,
     private readonly sapService: SapService,
   ) {}
-
-  // ==================== Admin Management ====================
-
-  // @Get('/admins')
-  // @ApiOperation({
-  //   summary: 'Get all admins (Super Admin only)',
-  //   description:
-  //     'Retrieves a paginated list of all admin accounts. Only super admins (is_protected=true) can access this endpoint.',
-  // })
-  // @ApiQuery({
-  //   name: 'offset',
-  //   required: false,
-  //   type: Number,
-  //   description: 'Number of records to skip (default: 0)',
-  //   example: 0,
-  // })
-  // @ApiQuery({
-  //   name: 'limit',
-  //   required: false,
-  //   type: Number,
-  //   description: 'Maximum number of records to return (default: 10)',
-  //   example: 10,
-  // })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'List of admins retrieved successfully',
-  //   type: PaginatedAdminsResponseDto,
-  // })
-  // @ApiResponse({
-  //   status: 401,
-  //   description: 'Unauthorized - Invalid or missing token',
-  // })
-  // @ApiResponse({
-  //   status: 403,
-  //   description: "Forbidden - You don't have rights to perform this action",
-  // })
-  // async getAdmins(
-  //   @Query() query: GetAdminsQueryDto,
-  //   @CurrentUser() user: UserPayload,
-  // ): Promise<PaginationResult<Admin>> {
-  //   return this.adminsService.getAdmins(user.id, query.offset ?? 0, query.limit ?? 10);
-  // }
 
   // ==================== User Management ====================
 
@@ -266,15 +218,9 @@ export class AdminsController {
   })
   async getUserInvestorTransactions(
     @Param('id') id: string,
-    @Query() query: InvestorTransactionsQueryDto,
-    @Body() filters: InvestorTransactionsFilterDto,
+    @Query() filters: InvestorTransactionsFilterDto,
   ): Promise<PaginationResult<InvestorTransaction>> {
     const user = await this.adminsService.getUserDetails(id);
-    return this.sapService.getInvestorTransactions(
-      user.sap_card_code as string,
-      8710,
-      query,
-      filters,
-    );
+    return this.sapService.getInvestorTransactions(user.sap_card_code as string, 8710, filters);
   }
 }

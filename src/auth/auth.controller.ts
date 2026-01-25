@@ -23,16 +23,22 @@ import {
   ApiTooManyRequestsResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SetPinDto } from './dto/set-pin.dto';
+import { ForgotPinDto } from './dto/forgot-pin.dto';
+import { VerifyPinOtpDto } from './dto/verify-pin-otp.dto';
+import { ResetPinDto } from './dto/reset-pin.dto';
 import type { AuthenticatedRequest } from '../common/types/authenticated-request.type';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { UserPayload } from '../common/interfaces/user-payload.interface';
 import { SendCodeResponse } from '../common/types/send-code.type';
 import { MessageResponseDto } from './dto/message.response.dto';
-import { TokenResponseDto } from './dto/token.response.dto';
+import { TokenResponseDto, AccessTokenResponseDto } from './dto/token.response.dto';
+import { JwtRefreshAuthGuard } from '../common/guards/jwt-refresh.guard';
 
 @ApiTags('Auth-admin')
 @Controller('auth/users')
@@ -217,7 +223,9 @@ export class AuthController {
       error: 'Conflict',
     },
   })
-  completeRegister(@Body() dto: RegisterDto): Promise<{ access_token: string }> {
+  completeRegister(
+    @Body() dto: RegisterDto,
+  ): Promise<{ access_token: string; refresh_token: string }> {
     return this.authService.completeRegistration(dto);
   }
 
@@ -282,7 +290,7 @@ export class AuthController {
       error: 'Not Found',
     },
   })
-  login(@Body() dto: LoginDto): Promise<{ access_token: string }> {
+  login(@Body() dto: LoginDto): Promise<{ access_token: string; refresh_token: string }> {
     return this.authService.login(dto);
   }
 
@@ -506,5 +514,100 @@ export class AuthController {
     }
 
     return this.authService.logout(user.id, token);
+  }
+
+  @Post('refresh')
+  @ApiBearerAuth()
+  @UseGuards(JwtRefreshAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Refresh access token using refresh token',
+    description:
+      'Generates a new access token using a valid refresh token. The refresh token must be provided in the Authorization header as a Bearer token.',
+  })
+  @ApiOkResponse({
+    type: AccessTokenResponseDto,
+    description: 'Access token refreshed successfully',
+    example: {
+      access_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid or missing refresh token',
+    examples: {
+      invalidToken: {
+        summary: 'Invalid refresh token',
+        value: {
+          statusCode: 401,
+          message: 'Invalid or missing refresh token',
+          error: 'Unauthorized',
+        },
+      },
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'User account is not active',
+    example: {
+      statusCode: 403,
+      message: 'User account is not active',
+      error: 'Forbidden',
+    },
+  })
+  refreshToken(@CurrentUser() user: UserPayload): Promise<{ access_token: string }> {
+    return this.authService.refreshAccessToken(user.id);
+  }
+
+  @Post('set-pin')
+  @ApiBearerAuth()
+  @UseGuards(JwtUserAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Set initial PIN code' })
+  @ApiOkResponse({
+    description: 'PIN created',
+    example: { success: true, message: 'PIN created' },
+  })
+  @ApiConflictResponse({ description: 'PIN already set' })
+  setPin(@CurrentUser() user: UserPayload, @Body() dto: SetPinDto): Promise<{ message: string }> {
+    return this.authService.setPin(user.id, dto);
+  }
+
+  @Post('forgot-pin/request')
+  @ApiBearerAuth()
+  @UseGuards(JwtUserAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Request PIN reset via SMS' })
+  @ApiOkResponse({ type: SendCodeResponseDto })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  forgotPinRequest(@Body() dto: ForgotPinDto): Promise<SendCodeResponse> {
+    return this.authService.forgotPin(dto);
+  }
+
+  @Post('forgot-pin/verify')
+  @ApiBearerAuth()
+  @UseGuards(JwtUserAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify PIN reset OTP' })
+  @ApiOkResponse({
+    description: 'Returns reset token',
+    schema: { example: { reset_token: 'uuid' } },
+  })
+  @ApiBadRequestResponse({ description: 'Invalid or expired code' })
+  forgotPinVerify(@Body() dto: VerifyPinOtpDto): Promise<{ reset_token: string }> {
+    return this.authService.verifyPinResetCode(dto);
+  }
+
+  @Post('forgot-pin/reset')
+  @ApiBearerAuth()
+  @UseGuards(JwtUserAuthGuard)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset PIN using token' })
+  @ApiOkResponse({
+    description: 'PIN updated successfully',
+    example: { success: true, message: 'PIN updated' },
+  })
+  @ApiForbiddenResponse({ description: 'Invalid token or mismatch' })
+  forgotPinReset(@Body() dto: ResetPinDto): Promise<{ message: string }> {
+    return this.authService.resetPin(dto);
   }
 }

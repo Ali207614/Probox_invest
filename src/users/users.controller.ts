@@ -10,7 +10,6 @@ import {
   Post,
   Delete,
   Body,
-  HttpCode,
 } from '@nestjs/common';
 import { JwtUserAuthGuard } from '../common/guards/jwt-user.guard';
 import { SapService } from '../sap/hana/sap-hana.service';
@@ -35,7 +34,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageUrls } from '../upload/upload.service';
 import { UsersService } from './users.service';
 import { IUser } from '../common/interfaces/user.interface';
-import { InvestorTransactionsQueryDto } from './dto/investor-transactions-query.dto';
 import { InvestorTransactionsFilterDto } from './dto/investor-transactions-filter.dto';
 
 @ApiTags('Users')
@@ -178,17 +176,11 @@ export class UsersController {
   }
 
   @Get('me/investor-transactions')
-  @HttpCode(200)
   @UseInterceptors(PaginationInterceptor)
   @ApiOperation({
     summary: 'Get investor transactions',
     description:
-      'Retrieves paginated list of investor transactions with optional filters for date range, transaction types, and direction',
-  })
-  @ApiBody({
-    type: InvestorTransactionsFilterDto,
-    description: 'Optional filters for transactions',
-    required: false,
+      'Retrieves paginated list of investor transactions with optional filters for date range, transaction types, and direction. Transactions are aggregated by date and type.',
   })
   @ApiResponse({
     status: 200,
@@ -212,15 +204,15 @@ export class UsersController {
             type: 'object',
             properties: {
               ref_date: { type: 'string', format: 'date', example: '2024-01-15' },
-              trans_id: { type: 'number', example: 12345 },
-              trans_type: { type: 'number', example: 30 },
-              description: { type: 'string', nullable: true, example: 'Monthly dividend payment' },
               amount: { type: 'number', example: 2500000 },
               transaction_type: {
                 type: 'string',
                 enum: ['initial_capital', 'additional_capital', 'reinvest', 'dividend', 'other'],
                 example: 'dividend',
               },
+              rows_count: { type: 'number', example: 1 },
+              min_trans_id: { type: 'number', example: 12345 },
+              max_trans_id: { type: 'number', example: 12345 },
             },
           },
         },
@@ -231,12 +223,11 @@ export class UsersController {
   @ApiResponse({ status: 500, description: 'SAP service unavailable or internal error' })
   async getMyInvestorTransactions(
     @Req() req: AuthenticatedRequest,
-    @Query() query: InvestorTransactionsQueryDto,
-    @Body() filters: InvestorTransactionsFilterDto,
+    @Query() filters: InvestorTransactionsFilterDto,
   ): Promise<PaginationResult<InvestorTransaction>> {
     const cardCode = req.user.sap_card_code;
 
-    return this.sapService.getInvestorTransactions(cardCode, 8710, query, filters);
+    return this.sapService.getInvestorTransactions(cardCode, 8710, filters);
   }
 
   @Post(':cardCode/profile-picture')

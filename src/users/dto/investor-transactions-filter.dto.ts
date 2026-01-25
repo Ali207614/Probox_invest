@@ -1,5 +1,6 @@
-import { IsArray, IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { Transform } from 'class-transformer';
 
 export enum TransactionType {
@@ -16,6 +17,18 @@ export enum TransactionDirection {
 }
 
 export class InvestorTransactionsFilterDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  offset?: number;
+
   @ApiProperty({ required: false, type: String })
   @IsOptional()
   @IsDateString()

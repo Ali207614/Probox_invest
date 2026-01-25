@@ -22,7 +22,12 @@ import { RedisService } from 'src/common/redis/redis.service';
 import { Knex } from 'knex';
 import { InjectKnex } from 'nestjs-knex';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { SetPinDto } from './dto/set-pin.dto';
+import { ForgotPinDto } from './dto/forgot-pin.dto';
+import { VerifyPinOtpDto } from './dto/verify-pin-otp.dto';
+import { ResetPinDto } from './dto/reset-pin.dto';
 import { UsersService } from '../users/users.service';
 import { IUser } from '../common/interfaces/user.interface';
 import { SapService } from '../sap/hana/sap-hana.service';
@@ -46,10 +51,34 @@ export class AuthService {
 
   private readonly REDIS_PREFIX = {
     verify: 'verify',
+
     reset: 'reset-code',
+    pin_reset: 'pin-reset-code',
   };
 
-  async sendCode(phone: string, type: 'verify' | 'reset'): Promise<SendCode> {
+  private readonly ACCESS_TOKEN_EXPIRES = '1d';
+  private readonly REFRESH_TOKEN_EXPIRES = '30d';
+  private readonly REFRESH_TOKEN_EXPIRES_SECONDS = 60 * 60 * 24 * 30; // 30 days
+
+  private generateTokens(user: IUser): { access_token: string; refresh_token: string } {
+    const accessPayload = {
+      id: user.id,
+      phone_main: user.phone_main,
+      sap_card_code: user.sap_card_code,
+      type: 'access',
+    };
+
+    const access_token = this.jwtService.sign(accessPayload, {
+      expiresIn: this.ACCESS_TOKEN_EXPIRES,
+    });
+
+    // Refresh token is now a long random string (64 bytes hex = 128 chars)
+    const refresh_token = crypto.randomBytes(64).toString('hex');
+
+    return { access_token, refresh_token };
+  }
+
+  async sendCode(phone: string, type: 'verify' | 'reset' | 'pin_reset'): Promise<SendCode> {
     const rateLimitKey = `rl:send_code:phone:${phone}`;
     const ttl = await this.redisService.ttl(rateLimitKey);
 
@@ -222,7 +251,9 @@ export class AuthService {
     return { reset_token: resetToken };
   }
 
-  async completeRegistration(dto: RegisterDto): Promise<{ access_token: string }> {
+  async completeRegistration(
+    dto: RegisterDto,
+  ): Promise<{ access_token: string; refresh_token: string }> {
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
     if (!user) {
@@ -261,19 +292,15 @@ export class AuthService {
       device_token: dto.device_token,
     });
 
-    const payload = {
-      id: user.id,
-      phone_main: user.phone_main,
-      sap_card_code: user.sap_card_code,
-    };
-    const token: string = this.jwtService.sign(payload);
+    const tokens = this.generateTokens(user);
 
-    await this.setUserSession(user.id, token);
+    await this.setUserSession(user.id, tokens.access_token);
+    await this.setRefreshToken(user.id, tokens.refresh_token);
 
-    return { access_token: token };
+    return tokens;
   }
 
-  async login(dto: LoginDto): Promise<{ access_token: string }> {
+  async login(dto: LoginDto): Promise<{ access_token: string; refresh_token: string }> {
     const user: IUser | undefined = await this.usersService.findByPhoneNumber(dto.phone_main);
 
     if (user) {
@@ -293,16 +320,12 @@ export class AuthService {
             .update({ device_token: dto.device_token });
         }
 
-        const payload = {
-          id: user.id,
-          phone_main: user.phone_main,
-          sap_card_code: user.sap_card_code,
-        };
-        const token: string = this.jwtService.sign(payload);
+        const tokens = this.generateTokens(user);
 
-        await this.setUserSession(user.id, token);
+        await this.setUserSession(user.id, tokens.access_token);
+        await this.setRefreshToken(user.id, tokens.refresh_token);
 
-        return { access_token: token };
+        return tokens;
       }
     }
 
@@ -326,7 +349,7 @@ export class AuthService {
 
     await this.redisService.del(sessionKey);
 
-    await this.redisService.set(`blacklist:${token}`, '1', 60 * 60 * 24 * 7);
+    await this.redisService.set(`blacklist:token:${token}`, '1', 60 * 60 * 24 * 7);
 
     return { message: 'Logged out successfully' };
   }
@@ -408,5 +431,154 @@ export class AuthService {
 
   private async setUserSession(userId: string, token: string): Promise<void> {
     await this.redisService.set(`session:user:${userId}`, token, 60 * 60 * 24); // 1 day
+  }
+
+  private async setRefreshToken(userId: string, token: string): Promise<void> {
+    // Store token -> userId mapping for lookup
+    await this.redisService.set(
+      `refresh_token:${token}`,
+      userId,
+      this.REFRESH_TOKEN_EXPIRES_SECONDS,
+    );
+    // Also keep user -> token mapping (useful for revoking all tokens for a user)
+    await this.redisService.set(
+      `refresh:user:${userId}`,
+      token,
+      this.REFRESH_TOKEN_EXPIRES_SECONDS,
+    );
+  }
+
+  async refreshAccessToken(userId: string): Promise<{ access_token: string }> {
+    const user = await this.knex<IUser>('users').where({ id: userId }).first();
+
+    if (!user) {
+      throw new NotFoundException({
+        message: 'User not found',
+        location: 'user_not_found',
+      });
+    }
+
+    if (user.status !== 'Open') {
+      throw new ForbiddenException({
+        message: 'User account is not active',
+        location: 'account_not_active',
+      });
+    }
+
+    const accessPayload = {
+      id: user.id,
+      phone_main: user.phone_main,
+      sap_card_code: user.sap_card_code,
+      type: 'access',
+    };
+
+    const access_token = this.jwtService.sign(accessPayload, {
+      expiresIn: this.ACCESS_TOKEN_EXPIRES,
+    });
+
+    await this.setUserSession(user.id, access_token);
+
+    return { access_token };
+  }
+
+  async setPin(userId: string, dto: SetPinDto): Promise<{ message: string }> {
+    const user = await this.knex<IUser>('users').where({ id: userId }).first();
+
+    if (!user) {
+      throw new NotFoundException({
+        message: 'User not found',
+        location: 'user_not_found',
+      });
+    }
+
+    if (user.pin_code) {
+      throw new ConflictException({
+        message: 'PIN already set',
+        location: 'pin_already_set',
+      });
+    }
+
+    if (dto.pin !== dto.confirm_pin) {
+      throw new BadRequestException({
+        message: 'PINs do not match',
+        location: 'confirm_pin',
+      });
+    }
+
+    const hashedPin = await bcrypt.hash(dto.pin, 10);
+
+    await this.knex('users')
+      .where({ id: userId })
+      .update({ pin_code: hashedPin, updated_at: new Date().toISOString() });
+
+    return { message: 'PIN created' };
+  }
+
+  async forgotPin(dto: ForgotPinDto): Promise<SendCodeResponse> {
+    const { raw: phone } = normalizeUzPhone(dto.phone_main);
+
+    const { code, expires_in, expires_at, retry_after } = await this.sendCode(phone, 'pin_reset');
+
+    const res: SendCodeResponse = {
+      message: 'PIN reset code sent successfully',
+      data: {
+        expires_in,
+        expires_at,
+        retry_after,
+      },
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      res.code = code;
+    }
+
+    return res;
+  }
+
+  async verifyPinResetCode(dto: VerifyPinOtpDto): Promise<{ reset_token: string }> {
+    const redisKey = `${this.REDIS_PREFIX.pin_reset}:${dto.phone_main}`;
+    const storedCode = await this.redisService.get(redisKey);
+
+    if (!storedCode || storedCode !== dto.code) {
+      throw new BadRequestException({
+        message: 'Invalid or expired code',
+        location: 'invalid_code',
+      });
+    }
+
+    const resetToken = crypto.randomUUID();
+    await this.redisService.set(`pin_reset_token:${resetToken}`, dto.phone_main, 600);
+
+    await this.redisService.del(redisKey);
+
+    return { reset_token: resetToken };
+  }
+
+  async resetPin(dto: ResetPinDto): Promise<{ message: string }> {
+    const storedPhone = await this.redisService.get(`pin_reset_token:${dto.reset_token}`);
+
+    if (!storedPhone || storedPhone !== dto.phone_main) {
+      throw new ForbiddenException({
+        message: 'Invalid token or mismatch',
+        location: 'invalid_token',
+      });
+    }
+
+    if (dto.new_pin !== dto.confirm_pin) {
+      throw new BadRequestException({
+        message: 'PINs do not match',
+        location: 'confirm_pin',
+      });
+    }
+
+    const hashedPin = await bcrypt.hash(dto.new_pin, 10);
+
+    await this.knex('users')
+      .where({ phone_main: dto.phone_main })
+      .update({ pin_code: hashedPin, updated_at: new Date().toISOString() });
+
+    await this.redisService.del(`pin_reset_token:${dto.reset_token}`);
+
+    return { message: 'PIN updated' };
   }
 }

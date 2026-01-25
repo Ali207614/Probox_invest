@@ -23,9 +23,9 @@ export interface InvestorIncomeSummary {
 
 export interface InvestorTransaction {
   ref_date: string;
-  trans_id: number;
-  trans_type: number;
-  description: string | null;
   amount: number;
   transaction_type: 'initial_capital' | 'additional_capital' | 'reinvest' | 'dividend' | 'other';
+  rows_count: number;
+  min_trans_id: number;
+  max_trans_id: number;
 }
