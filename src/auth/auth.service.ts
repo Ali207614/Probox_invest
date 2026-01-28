@@ -486,13 +486,6 @@ export class AuthService {
       });
     }
 
-    if (user.pin_code) {
-      throw new ConflictException({
-        message: 'PIN already set',
-        location: 'pin_already_set',
-      });
-    }
-
     if (dto.pin !== dto.confirm_pin) {
       throw new BadRequestException({
         message: 'PINs do not match',
