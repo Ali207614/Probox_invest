@@ -52,8 +52,8 @@ export class AuthService {
     pin_reset: 'pin-reset-code',
   };
 
-  private readonly ACCESS_TOKEN_EXPIRES = '1d';
-  private readonly REFRESH_TOKEN_EXPIRES_SECONDS = 60 * 60 * 24 * 30; // 30 days
+  private readonly ACCESS_TOKEN_EXPIRES = '30d'; // 30 days
+  private readonly REFRESH_TOKEN_EXPIRES_SECONDS = 60 * 60 * 24 * 31; // 31 days
 
   private generateTokens(user: IUser): { access_token: string; refresh_token: string } {
     const accessPayload = {
